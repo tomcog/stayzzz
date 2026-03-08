@@ -1,2 +1,2 @@
-export const projectId = "bztecpeddbxzyezpfxvb";
-export const publicAnonKey = "sb_publishable_v8yo-JYwq5ViYjvyBuQ2Ng_OoIpZ9FH";
+export const projectId = "tmrbzyrnuzwjrqvflgvb";
+export const publicAnonKey = "sb_publishable_2sneomY7ZPB88TkNUoc-ig_QIMpJlYY";
