@@ -18,7 +18,10 @@ export default defineConfig({
       '/api/ical': {
         target: 'https://www.airbnb.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/ical/, ''),
+        rewrite: () => {
+          const url = new URL(process.env.VITE_AIRBNB_ICAL_URL || '');
+          return url.pathname + '?' + url.searchParams.toString();
+        },
       },
     },
   },

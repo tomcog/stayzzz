@@ -1,8 +1,6 @@
 import ICAL from "ical.js";
 import { supabase } from "./supabaseClient";
 
-const AIRBNB_ICAL_URL = import.meta.env.VITE_AIRBNB_ICAL_URL;
-
 interface RentalEvent {
   airbnb_uid: string;
   guest_name: string | null;
@@ -19,9 +17,8 @@ export async function syncAirbnbCalendar(): Promise<{
   inserted: number;
   errors: string[];
 }> {
-  // 1. Fetch the iCal feed via Vite dev proxy
-  const icalPath = new URL(AIRBNB_ICAL_URL).pathname + '?' + new URL(AIRBNB_ICAL_URL).searchParams.toString();
-  const response = await fetch(`/api/ical${icalPath}`);
+  // 1. Fetch the iCal feed via serverless proxy
+  const response = await fetch('/api/ical');
 
   if (!response.ok) {
     throw new Error(`Failed to fetch iCal feed: ${response.statusText}`);
