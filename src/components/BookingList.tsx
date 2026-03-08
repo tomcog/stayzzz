@@ -66,7 +66,7 @@ export function BookingList({ bookings, onBookingClick, onUpdateBooking }: Booki
           <AccordionContent>
             <div className="space-y-3 px-[16px] pt-3">
               {completedBookings
-                .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.checkOut).getTime())
+                .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())
                 .map(booking => (
                   <BookingCard key={booking.id} booking={booking} onClick={() => onBookingClick(booking)} allBookings={bookings} onUpdateBooking={onUpdateBooking} />
                 ))}

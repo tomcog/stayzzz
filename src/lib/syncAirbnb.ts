@@ -37,7 +37,7 @@ export async function syncAirbnbCalendar(): Promise<{
   const events: RentalEvent[] = vevents.map((vevent) => {
     const event = new ICAL.Event(vevent);
     const summary: string = event.summary ?? "";
-    const description: string = vevent.getFirstPropertyValue("description") ?? "";
+    const description: string = String(vevent.getFirstPropertyValue("description") ?? "");
 
     // Determine if this is a blocked date or a real reservation
     const isBlocked = summary.toUpperCase().includes("NOT AVAILABLE");
