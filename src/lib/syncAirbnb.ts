@@ -1,25 +1,27 @@
 import ICAL from "ical.js";
-import { supabase } from "https://bztecpeddbxzyezpfxvb.supabase.co"; // adjust path to your client
+import { supabase } from "./supabaseClient";
 
 const AIRBNB_ICAL_URL = import.meta.env.VITE_AIRBNB_ICAL_URL;
 
 interface RentalEvent {
   airbnb_uid: string;
   guest_name: string | null;
+  confirmation_code: string | null;
+  phone_last_four: string | null;
   start_date: string;
   end_date: string;
-  status: string;
+  stay_type: string;
+  booking_url: string | null;
   last_synced_at: string;
 }
 
 export async function syncAirbnbCalendar(): Promise<{
   inserted: number;
-  updated: number;
   errors: string[];
 }> {
-  // 1. Fetch the iCal feed via a CORS proxy (needed in the browser)
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(AIRBNB_ICAL_URL)}`;
-  const response = await fetch(proxyUrl);
+  // 1. Fetch the iCal feed via Vite dev proxy
+  const icalPath = new URL(AIRBNB_ICAL_URL).pathname + '?' + new URL(AIRBNB_ICAL_URL).searchParams.toString();
+  const response = await fetch(`/api/ical${icalPath}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch iCal feed: ${response.statusText}`);
@@ -35,45 +37,50 @@ export async function syncAirbnbCalendar(): Promise<{
   const events: RentalEvent[] = vevents.map((vevent) => {
     const event = new ICAL.Event(vevent);
     const summary: string = event.summary ?? "";
+    const description: string = vevent.getFirstPropertyValue("description") ?? "";
 
-    // Airbnb puts "BLOCKED" for blocked dates, or "Guest Name (CONFIRMED)" for bookings
-    const isBlocked =
-      summary.toUpperCase().includes("BLOCKED") ||
-      summary.toUpperCase().includes("AIRBNB (NOT AVAILABLE)");
+    // Determine if this is a blocked date or a real reservation
+    const isBlocked = summary.toUpperCase().includes("NOT AVAILABLE");
+    const stayType = isBlocked ? "unresolved" : "guest";
 
-    const guestName = isBlocked ? null : summary.replace(/\s*\(.*?\)\s*$/, "").trim() || null;
-    const status = isBlocked ? "blocked" : "confirmed";
+    // Extract reservation URL and confirmation code
+    // e.g. "https://www.airbnb.com/hosting/reservations/details/HMTZ8YA4ZC"
+    const urlMatch = description.match(/(https:\/\/www\.airbnb\.com\/hosting\/reservations\/details\/\w+)/);
+    const bookingUrl = urlMatch ? urlMatch[1] : null;
+    const confirmationMatch = description.match(/reservations\/details\/(\w+)/);
+    const confirmationCode = confirmationMatch ? confirmationMatch[1] : null;
+
+    // Extract last 4 digits of phone number
+    // e.g. "Phone Number (Last 4 Digits): 1925"
+    const phoneMatch = description.match(/Phone Number \(Last 4 Digits\):\s*(\d{4})/);
+    const phoneLastFour = phoneMatch ? phoneMatch[1] : null;
 
     return {
       airbnb_uid: event.uid,
-      guest_name: guestName,
+      guest_name: isBlocked ? "Not available" : null,
+      confirmation_code: confirmationCode,
+      phone_last_four: phoneLastFour,
+      booking_url: bookingUrl,
       start_date: event.startDate.toJSDate().toISOString().split("T")[0],
       end_date: event.endDate.toJSDate().toISOString().split("T")[0],
-      status,
+      stay_type: stayType,
       last_synced_at: new Date().toISOString(),
     };
   });
 
-  // 3. Upsert into Supabase
+  // 3. Upsert into Supabase — updates existing rows, inserts new ones
   const { error } = await supabase.from("rentals").upsert(events, {
     onConflict: "airbnb_uid",
-    ignoreDuplicates: false, // update existing rows
+    ignoreDuplicates: false,
   });
 
-  if (error) throw new Error(`Supabase upsert error: ${error.message}`);
+  if (error) {
+    console.error('Supabase upsert error:', error);
+    throw new Error(`Supabase upsert error: ${error.message}`);
+  }
 
   return {
     inserted: events.length,
-    updated: 0, // Supabase doesn't split these out easily
     errors: [],
   };
 }
-```
-
----
-
-## Step 5: Add your iCal URL to environment variables
-
-In your `.env` file (create it if it doesn't exist):
-```
-VITE_AIRBNB_ICAL_URL=https://www.airbnb.com/calendar/ical/YOUR_ID.ics?s=YOUR_SECRET

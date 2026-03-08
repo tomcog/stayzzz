@@ -1,0 +1,274 @@
+import { useState, useEffect } from 'react';
+import { Home, Calendar, RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { BookingList } from './components/BookingList';
+import { CalendarView } from './components/CalendarView';
+import { AddBookingDialog } from './components/AddBookingDialog';
+import { BookingDetailsSheet } from './components/BookingDetailsSheet';
+import { ButtonFab } from './components/button-fab';
+import { ButtonPrimary } from './components/button-primary';
+import { Toaster } from './components/ui/sonner';
+import { toast } from 'sonner';
+import { projectId, publicAnonKey } from './utils/supabase/info';
+import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from './utils/dateUtils';
+import { syncAirbnbCalendar } from './lib/syncAirbnb';
+
+export interface Booking {
+  id: string;
+  stay_type: 'guest' | 'owner' | 'service' | 'unresolved';
+  guest_name: string;
+  start_date: string;
+  end_date: string;
+  status: 'upcoming' | 'current' | 'completed';
+  phone_number: string;
+  booking_url: string;
+  notes?: string;
+  pool_heat?: 'not-asked' | 'undecided' | 'declined' | 'requested' | 'paid';
+  airbnb_uid?: string;
+  confirmation_code?: string;
+  phone_last_four?: string;
+  last_synced_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  service_requested?: string;
+  provider_name?: string;
+  provider_contact?: string;
+  provider_url?: string;
+  service_date?: string;
+  service_time?: string;
+  contact_phone?: string;
+}
+
+const API_URL = `https://${projectId}.supabase.co/rest/v1`;
+
+export default function App() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const headers = {
+    'apikey': publicAnonKey,
+    'Authorization': `Bearer ${publicAnonKey}`,
+    'Content-Type': 'application/json',
+  };
+
+  const fetchBookings = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/rentals?select=*`, { headers });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch bookings: ${response.status} ${errorText}`);
+      }
+
+      const fetchedBookings: Booking[] = await response.json();
+
+      const updatedBookings = fetchedBookings.map((booking) => ({
+        ...booking,
+        status: calculateBookingStatus(booking.start_date, booking.end_date),
+        pool_heat: booking.pool_heat || 'not-asked',
+      }));
+
+      setBookings(updatedBookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast.error('Failed to load bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const syncAndFetch = async () => {
+    try {
+      await syncAirbnbCalendar();
+    } catch (error) {
+      console.error('Sync failed:', error);
+    }
+    await fetchBookings();
+  };
+
+  useEffect(() => { syncAndFetch(); }, []);
+
+  useEffect(() => {
+    let link = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'apple-touch-icon';
+      document.head.appendChild(link);
+    }
+    let viewport = document.querySelector("meta[name='viewport']") as HTMLMetaElement | null;
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.name = 'viewport';
+      document.head.appendChild(viewport);
+    }
+    viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await syncAirbnbCalendar();
+      await fetchBookings();
+      toast.success(`Synced ${result.inserted} bookings from Airbnb`);
+    } catch (error) {
+      console.error('Sync failed:', error);
+      await fetchBookings();
+      toast.error('Sync failed, showing cached bookings');
+    }
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => {
+    const updateStatuses = () => {
+      setBookings(prev =>
+        prev.map(booking => {
+          const newStatus = calculateBookingStatus(booking.start_date, booking.end_date);
+          return newStatus !== booking.status
+            ? { ...booking, status: newStatus, pool_heat: booking.pool_heat || 'not-asked' }
+            : { ...booking, pool_heat: booking.pool_heat || 'not-asked' };
+        })
+      );
+    };
+    updateStatuses();
+    const interval = setInterval(updateStatuses, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAddBooking = async (booking: Omit<Booking, 'id' | 'status'>) => {
+    const status = calculateBookingStatus(booking.start_date, booking.end_date);
+    const { ...bookingData } = booking;
+
+    const response = await fetch(`${API_URL}/rentals`, {
+      method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=representation' },
+      body: JSON.stringify(bookingData),
+    });
+
+    if (!response.ok) throw new Error('Failed to create booking');
+    const [newBooking] = await response.json();
+    setBookings(prev => [...prev, { ...newBooking, status, pool_heat: newBooking.pool_heat || 'not-asked' }]);
+  };
+
+  const handleUpdateBooking = async (updatedBooking: Booking) => {
+    const bookingWithDefaults = { ...updatedBooking, pool_heat: updatedBooking.pool_heat || 'not-asked' };
+    const { id, status, ...updateData } = bookingWithDefaults;
+
+    const response = await fetch(`${API_URL}/rentals?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=representation' },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update booking: ${response.status} ${errorText}`);
+    }
+
+    setBookings(prev => prev.map(b => b.id === bookingWithDefaults.id ? bookingWithDefaults : b));
+    if (selectedBooking?.id === bookingWithDefaults.id) setSelectedBooking(bookingWithDefaults);
+    toast.success('Booking updated successfully');
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    const response = await fetch(`${API_URL}/rentals?id=eq.${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!response.ok) throw new Error('Failed to delete booking');
+    setBookings(prev => prev.filter(b => b.id !== id));
+    setIsDetailsSheetOpen(false);
+  };
+
+  const handleBookingClick = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setIsDetailsSheetOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#eeeeee] pb-20">
+      <Toaster />
+
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Home className="w-6 h-6" style={{ color: '#000000' }} />
+              <h1>Andreas Palms</h1>
+            </div>
+            <ButtonPrimary onClick={() => setIsAddDialogOpen(true)}>
+              Add Booking
+            </ButtonPrimary>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-gray-100 min-h-screen px-[0px] py-[16px] p-[16px] flex justify-center max-w-[800px] mx-auto">
+        <Tabs defaultValue="list" className="w-full">
+          <div className="text-center mt-[0px] mr-[0px] mb-[8px] ml-[0px] flex items-center justify-center gap-2">
+            <span className="text-gray-600 text-[18px] font-medium">
+              Today is {new Date().toLocaleDateString('en-US', {
+                timeZone: 'America/Los_Angeles',
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
+          </div>
+
+          <TabsList className="grid grid-cols-2 mb-4 w-[85%] mx-auto bg-[#E5E5E5] h-[40px]">
+            <TabsTrigger value="list" className="gap-2">
+              <Home className="w-4 h-4" />
+              Bookings
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Calendar
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="mt-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500">Loading bookings...</div>
+              </div>
+            ) : (
+              <BookingList bookings={bookings} onBookingClick={handleBookingClick} onUpdateBooking={handleUpdateBooking} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="calendar" className="mt-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500">Loading bookings...</div>
+              </div>
+            ) : (
+              <CalendarView bookings={bookings} onBookingClick={handleBookingClick} />
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />
+
+      {selectedBooking && (
+        <BookingDetailsSheet
+          open={isDetailsSheetOpen}
+          onOpenChange={setIsDetailsSheetOpen}
+          booking={selectedBooking}
+          onUpdateBooking={handleUpdateBooking}
+          onDeleteBooking={handleDeleteBooking}
+        />
+      )}
+
+      <ButtonFab onClick={handleRefresh} disabled={isRefreshing} icon={RefreshCw} isAnimating={isRefreshing} label="refresh_booking" />
+    </div>
+  );
+}
