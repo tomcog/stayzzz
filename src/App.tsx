@@ -141,7 +141,10 @@ export default function App() {
 
   const handleAddBooking = async (booking: Omit<Booking, 'id' | 'status'>) => {
     const status = calculateBookingStatus(booking.start_date, booking.end_date);
-    const { ...bookingData } = booking;
+    const bookingData = {
+      ...booking,
+      airbnb_uid: `manual_${crypto.randomUUID()}`,
+    };
 
     const response = await fetch(`${API_URL}/rentals`, {
       method: 'POST',
@@ -149,7 +152,10 @@ export default function App() {
       body: JSON.stringify(bookingData),
     });
 
-    if (!response.ok) throw new Error('Failed to create booking');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create booking: ${errorText}`);
+    }
     const [newBooking] = await response.json();
     setBookings(prev => [...prev, { ...newBooking, status, pool_heat: newBooking.pool_heat || 'not-asked' }]);
   };
