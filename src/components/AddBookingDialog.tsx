@@ -18,7 +18,7 @@ import { POOL_HEAT_STATUSES } from '../utils/statusConfig';
 interface AddBookingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddBooking: (booking: Omit<Booking, 'id' | 'status'>) => void;
+  onAddBooking: (booking: Omit<Booking, 'id' | 'status'>) => Promise<void>;
 }
 
 const emptyForm = {
@@ -43,7 +43,7 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
 
   const resetForm = () => { setBookingType('guest'); setDateRange(undefined); setFormData(emptyForm); };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (bookingType === 'service') {
@@ -54,27 +54,30 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
       if (!dateRange?.from || !dateRange?.to) { toast.error('Please select check-in and check-out dates'); return; }
     }
 
-    onAddBooking({
-      stay_type: bookingType,
-      guest_name: bookingType === 'service' ? (formData.provider_name || formData.service_requested) : formData.guest_name,
-      start_date: format(dateRange!.from!, 'yyyy-MM-dd'),
-      end_date: format(dateRange!.to!, 'yyyy-MM-dd'),
-      phone_number: formData.phone_number,
-      booking_url: formData.booking_url,
-      notes: formData.notes,
-      pool_heat: formData.pool_heat,
-      service_requested: formData.service_requested || undefined,
-      provider_name: formData.provider_name || undefined,
-      provider_contact: formData.provider_contact || undefined,
-      provider_url: formData.provider_url || undefined,
-      service_date: formData.service_date || undefined,
-      service_time: formData.service_time || undefined,
-      contact_phone: formData.contact_phone || undefined,
-    });
-
-    toast.success('Booking added successfully!');
-    resetForm();
-    onOpenChange(false);
+    try {
+      await onAddBooking({
+        stay_type: bookingType,
+        guest_name: bookingType === 'service' ? (formData.provider_name || formData.service_requested) : formData.guest_name,
+        start_date: format(dateRange!.from!, 'yyyy-MM-dd'),
+        end_date: format(dateRange!.to!, 'yyyy-MM-dd'),
+        phone_number: formData.phone_number,
+        booking_url: formData.booking_url,
+        notes: formData.notes,
+        pool_heat: formData.pool_heat,
+        service_requested: formData.service_requested || undefined,
+        provider_name: formData.provider_name || undefined,
+        provider_contact: formData.provider_contact || undefined,
+        provider_url: formData.provider_url || undefined,
+        service_date: formData.service_date || undefined,
+        service_time: formData.service_time || undefined,
+        contact_phone: formData.contact_phone || undefined,
+      });
+      toast.success('Booking added successfully!');
+      resetForm();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add booking');
+    }
   };
 
   return (
