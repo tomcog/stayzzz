@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 
 interface RentalEvent {
   airbnb_uid: string;
-  guest_name?: string | null;
+  guest_name: string | null;
   stay_type: string;
   start_date: string;
   end_date: string;
@@ -42,7 +42,7 @@ export async function syncVrboCalendar(): Promise<{
       // "Blocked" → unresolved (owner hold or manual block)
       const reservedMatch = summary.match(/^Reserved\s*-\s*(.+)$/i);
       const isReservation = !!reservedMatch;
-      const guestName = reservedMatch ? reservedMatch[1].trim() : null;
+      const guestName: string | null = reservedMatch ? reservedMatch[1].trim() : null;
 
       return {
         airbnb_uid: event.uid,
@@ -51,7 +51,7 @@ export async function syncVrboCalendar(): Promise<{
         start_date: event.startDate.toJSDate().toISOString().split("T")[0],
         end_date: endDate.toISOString().split("T")[0],
         last_synced_at: new Date().toISOString(),
-      };
+      } satisfies RentalEvent;
     })
     .filter((e): e is RentalEvent => e !== null);
 
