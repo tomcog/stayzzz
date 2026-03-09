@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 
 interface RentalEvent {
   airbnb_uid: string;
-  guest_name: string | null;
+  guest_name?: string | null;
   confirmation_code: string | null;
   phone_last_four: string | null;
   start_date: string;
