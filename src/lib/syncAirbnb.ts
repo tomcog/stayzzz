@@ -54,7 +54,6 @@ export async function syncAirbnbCalendar(): Promise<{
 
     return {
       airbnb_uid: event.uid,
-      guest_name: isBlocked ? "Not available" : null,
       confirmation_code: confirmationCode,
       phone_last_four: phoneLastFour,
       booking_url: bookingUrl,
