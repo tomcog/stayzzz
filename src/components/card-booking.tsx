@@ -144,7 +144,7 @@ export function CardBooking({ booking, onClick, allBookings, onUpdateBooking, is
           )}
         </div>
 
-        {booking.phone_number && (
+        {booking.phone_number ? (
           <ContactMenu phoneNumber={booking.phone_number} name={booking.guest_name}>
             <div className="mx-[0px] my-[8px] px-[0px] py-[8px] flex items-center justify-center gap-2 cursor-pointer">
               <button className="h-[44px] w-[44px] rounded-full shadow-lg bg-cta hover:bg-cta/90 flex items-center justify-center transition-colors" aria-label="Contact guest">
@@ -153,6 +153,13 @@ export function CardBooking({ booking, onClick, allBookings, onUpdateBooking, is
               <span className="text-cta hover:underline font-medium text-[18px] text-left">{formatPhoneNumber(booking.phone_number)}</span>
             </div>
           </ContactMenu>
+        ) : booking.stay_type === 'guest' && (
+          <div className="mx-[0px] my-[8px] px-[0px] py-[8px] flex items-center justify-center gap-2">
+            <div className="h-[44px] w-[44px] rounded-full shadow-lg flex items-center justify-center" style={{ backgroundColor: '#ee5a7b' }}>
+              <Phone className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-medium text-[18px]" style={{ color: '#ee5a7b' }}>MISSING</span>
+          </div>
         )}
 
 

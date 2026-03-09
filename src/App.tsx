@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Home, Calendar, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Home, Calendar, RefreshCw, Search, XCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { BookingList } from './components/BookingList';
 import { CalendarView } from './components/CalendarView';
@@ -48,6 +48,23 @@ export default function App() {
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const openSearch = () => {
+    setIsSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const filteredBookings = searchQuery.trim()
+    ? bookings.filter(b => b.guest_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : bookings;
 
   const headers = {
     'apikey': publicAnonKey,
@@ -229,36 +246,75 @@ export default function App() {
             </span>
           </div>
 
-          <TabsList className="grid grid-cols-2 mb-4 w-[85%] mx-auto bg-[#E5E5E5] h-[40px]">
-            <TabsTrigger value="list" className="gap-2">
-              <Home className="w-4 h-4" />
-              Bookings
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              Calendar
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="list" className="mt-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading bookings...</div>
+          <div className="flex items-center gap-2 mb-4 w-[85%] mx-auto">
+            {isSearchOpen ? (
+              <div className="flex items-center bg-white rounded-full px-3 h-[40px] flex-1 gap-2 shadow-sm">
+                <button onClick={searchQuery ? closeSearch : undefined} className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors" aria-label={searchQuery ? 'Clear search' : 'Search'}>
+                  {searchQuery ? <XCircle className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                </button>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by guest name..."
+                  className="flex-1 bg-transparent outline-none text-[16px] text-gray-800 placeholder:text-gray-400"
+                />
               </div>
             ) : (
-              <BookingList bookings={bookings} onBookingClick={handleBookingClick} onUpdateBooking={handleUpdateBooking} />
+              <>
+                <button
+                  onClick={openSearch}
+                  className="h-[40px] w-[40px] rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 hover:bg-gray-50 transition-colors"
+                  aria-label="Search"
+                >
+                  <Search className="w-5 h-5 text-gray-600" />
+                </button>
+                <TabsList className="grid grid-cols-2 flex-1 bg-[#E5E5E5] h-[40px]">
+                  <TabsTrigger value="list" className="gap-2">
+                    <Home className="w-4 h-4" />
+                    Bookings
+                  </TabsTrigger>
+                  <TabsTrigger value="calendar" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Calendar
+                  </TabsTrigger>
+                </TabsList>
+              </>
             )}
-          </TabsContent>
+          </div>
 
-          <TabsContent value="calendar" className="mt-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading bookings...</div>
-              </div>
-            ) : (
-              <CalendarView bookings={bookings} onBookingClick={handleBookingClick} />
-            )}
-          </TabsContent>
+          {isSearchOpen ? (
+            <div className="mt-0">
+              {filteredBookings.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">No guests found matching "{searchQuery}"</div>
+              ) : (
+                <BookingList bookings={filteredBookings} onBookingClick={handleBookingClick} onUpdateBooking={handleUpdateBooking} />
+              )}
+            </div>
+          ) : (
+            <>
+              <TabsContent value="list" className="mt-0">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Loading bookings...</div>
+                  </div>
+                ) : (
+                  <BookingList bookings={bookings} onBookingClick={handleBookingClick} onUpdateBooking={handleUpdateBooking} />
+                )}
+              </TabsContent>
+
+              <TabsContent value="calendar" className="mt-0">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Loading bookings...</div>
+                  </div>
+                ) : (
+                  <CalendarView bookings={bookings} onBookingClick={handleBookingClick} />
+                )}
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
 
