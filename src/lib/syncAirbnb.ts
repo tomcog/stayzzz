@@ -87,14 +87,20 @@ export async function syncAirbnbCalendar(): Promise<{
     if (error) throw new Error(`Supabase insert error: ${error.message}`);
   }
 
-  // 4b. Update existing records WITHOUT stay_type so user's manual changes are preserved
-  if (existingEvents.length > 0) {
-    const updatesWithoutStayType = existingEvents.map(({ stay_type: _omit, ...rest }) => rest);
-    const { error } = await supabase.from("rentals").upsert(updatesWithoutStayType, {
-      onConflict: "airbnb_uid",
-      ignoreDuplicates: false,
-    });
-    if (error) throw new Error(`Supabase update error: ${error.message}`);
+  // 4b. Update existing records — only touch sync-safe fields, never stay_type or guest_name
+  for (const event of existingEvents) {
+    const { error } = await supabase
+      .from("rentals")
+      .update({
+        start_date: event.start_date,
+        end_date: event.end_date,
+        confirmation_code: event.confirmation_code,
+        phone_last_four: event.phone_last_four,
+        booking_url: event.booking_url,
+        last_synced_at: event.last_synced_at,
+      })
+      .eq("airbnb_uid", event.airbnb_uid);
+    if (error) console.error(`Failed to update ${event.airbnb_uid}:`, error.message);
   }
 
   return {

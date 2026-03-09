@@ -81,14 +81,17 @@ export async function syncVrboCalendar(): Promise<{
     if (error) throw new Error(`VRBO insert error: ${error.message}`);
   }
 
-  // Update existing records — preserve stay_type and guest_name so manual edits are never overwritten
-  if (existingEvents.length > 0) {
-    const updatesWithoutStayType = existingEvents.map(({ stay_type: _s, guest_name: _g, ...rest }) => rest);
-    const { error } = await supabase.from("rentals").upsert(updatesWithoutStayType, {
-      onConflict: "airbnb_uid",
-      ignoreDuplicates: false,
-    });
-    if (error) throw new Error(`VRBO update error: ${error.message}`);
+  // Update existing records — only touch sync-safe fields, never stay_type or guest_name
+  for (const event of existingEvents) {
+    const { error } = await supabase
+      .from("rentals")
+      .update({
+        start_date: event.start_date,
+        end_date: event.end_date,
+        last_synced_at: event.last_synced_at,
+      })
+      .eq("airbnb_uid", event.airbnb_uid);
+    if (error) console.error(`Failed to update VRBO ${event.airbnb_uid}:`, error.message);
   }
 
   return { inserted: newEvents.length, errors: [] };
