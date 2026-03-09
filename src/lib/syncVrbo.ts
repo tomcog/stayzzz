@@ -61,10 +61,12 @@ export async function syncVrboCalendar(): Promise<{
 
   // Detect new vs existing to preserve manually-set stay_type
   const incomingUids = events.map(e => e.airbnb_uid);
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("rentals")
     .select("airbnb_uid")
     .in("airbnb_uid", incomingUids);
+
+  if (existingError) throw new Error(`Failed to fetch existing VRBO records: ${existingError.message}`);
 
   const existingUids = new Set((existing ?? []).map(r => r.airbnb_uid));
   const newEvents = events.filter(e => !existingUids.has(e.airbnb_uid));

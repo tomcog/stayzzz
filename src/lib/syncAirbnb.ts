@@ -67,10 +67,12 @@ export async function syncAirbnbCalendar(): Promise<{
   // 3. Fetch existing airbnb_uids before upserting so we can detect new ones
   //    and preserve manually-set stay_type on existing records
   const incomingUids = events.map(e => e.airbnb_uid);
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("rentals")
     .select("airbnb_uid")
     .in("airbnb_uid", incomingUids);
+
+  if (existingError) throw new Error(`Failed to fetch existing records: ${existingError.message}`);
 
   const existingUids = new Set((existing ?? []).map(r => r.airbnb_uid));
   const newEvents = events.filter(e => !existingUids.has(e.airbnb_uid));
