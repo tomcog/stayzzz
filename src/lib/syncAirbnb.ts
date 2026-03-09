@@ -64,19 +64,39 @@ export async function syncAirbnbCalendar(): Promise<{
     };
   });
 
-  // 3. Upsert into Supabase — updates existing rows, inserts new ones
-  const { error } = await supabase.from("rentals").upsert(events, {
-    onConflict: "airbnb_uid",
-    ignoreDuplicates: false,
-  });
+  // 3. Fetch existing airbnb_uids before upserting so we can detect new ones
+  //    and preserve manually-set stay_type on existing records
+  const incomingUids = events.map(e => e.airbnb_uid);
+  const { data: existing } = await supabase
+    .from("rentals")
+    .select("airbnb_uid")
+    .in("airbnb_uid", incomingUids);
 
-  if (error) {
-    console.error('Supabase upsert error:', error);
-    throw new Error(`Supabase upsert error: ${error.message}`);
+  const existingUids = new Set((existing ?? []).map(r => r.airbnb_uid));
+  const newEvents = events.filter(e => !existingUids.has(e.airbnb_uid));
+  const existingEvents = events.filter(e => existingUids.has(e.airbnb_uid));
+
+  // 4a. Insert new records with stay_type
+  if (newEvents.length > 0) {
+    const { error } = await supabase.from("rentals").upsert(newEvents, {
+      onConflict: "airbnb_uid",
+      ignoreDuplicates: false,
+    });
+    if (error) throw new Error(`Supabase insert error: ${error.message}`);
+  }
+
+  // 4b. Update existing records WITHOUT stay_type so user's manual changes are preserved
+  if (existingEvents.length > 0) {
+    const updatesWithoutStayType = existingEvents.map(({ stay_type: _omit, ...rest }) => rest);
+    const { error } = await supabase.from("rentals").upsert(updatesWithoutStayType, {
+      onConflict: "airbnb_uid",
+      ignoreDuplicates: false,
+    });
+    if (error) throw new Error(`Supabase update error: ${error.message}`);
   }
 
   return {
-    inserted: events.length,
+    inserted: newEvents.length,
     errors: [],
   };
 }

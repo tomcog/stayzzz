@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { projectId, publicAnonKey } from './utils/supabase/info';
 import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from './utils/dateUtils';
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
+import { syncVrboCalendar } from './lib/syncVrbo';
 
 export interface Booking {
   id: string;
@@ -100,11 +101,10 @@ export default function App() {
   };
 
   const syncAndFetch = async () => {
-    try {
-      await syncAirbnbCalendar();
-    } catch (error) {
-      console.error('Sync failed:', error);
-    }
+    await Promise.allSettled([
+      syncAirbnbCalendar().catch(e => console.error('Airbnb sync failed:', e)),
+      syncVrboCalendar().catch(e => console.error('VRBO sync failed:', e)),
+    ]);
     await fetchBookings();
   };
 
@@ -129,9 +129,17 @@ export default function App() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const result = await syncAirbnbCalendar();
+      const [airbnbResult, vrboResult] = await Promise.all([
+        syncAirbnbCalendar().catch(() => ({ inserted: 0, errors: [] })),
+        syncVrboCalendar().catch(() => ({ inserted: 0, errors: [] })),
+      ]);
       await fetchBookings();
-      toast.success(`Synced ${result.inserted} bookings from Airbnb`);
+      const totalNew = airbnbResult.inserted + vrboResult.inserted;
+      toast.success(
+        totalNew > 0
+          ? `${totalNew} new ${totalNew === 1 ? 'booking' : 'bookings'} synced`
+          : 'Up to date — no new bookings'
+      );
     } catch (error) {
       console.error('Sync failed:', error);
       await fetchBookings();
@@ -315,6 +323,23 @@ export default function App() {
               </TabsContent>
             </>
           )}
+          {(() => {
+            const currentYear = new Date().getFullYear();
+            const qualifyingStays = bookings.filter(b => {
+              if (b.stay_type !== 'guest') return false;
+              if (new Date(b.start_date).getFullYear() !== currentYear) return false;
+              const nights = Math.ceil((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / (1000 * 60 * 60 * 24));
+              return nights < 28;
+            });
+            const totalNights = qualifyingStays.reduce((sum, b) => {
+              return sum + Math.ceil((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / (1000 * 60 * 60 * 24));
+            }, 0);
+            return (
+              <p className="text-center text-gray-400 text-[12px] mt-4 mb-2">
+                {currentYear} · {qualifyingStays.length} guest {qualifyingStays.length === 1 ? 'stay' : 'stays'} · {totalNights} {totalNights === 1 ? 'night' : 'nights'} booked
+              </p>
+            );
+          })()}
         </Tabs>
       </div>
 

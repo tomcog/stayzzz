@@ -6,6 +6,7 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const icalUrl = env.VITE_AIRBNB_ICAL_URL
+  const vrboIcalUrl = env.VITE_VRBO_ICAL_URL
 
   return {
     plugins: [
@@ -23,9 +24,26 @@ export default defineConfig(({ mode }) => {
           target: 'https://www.airbnb.com',
           changeOrigin: true,
           rewrite: () => {
-            if (!icalUrl) return '/'
-            const url = new URL(icalUrl)
-            return url.pathname + '?' + url.searchParams.toString()
+            try {
+              if (!icalUrl) return '/'
+              const url = new URL(icalUrl)
+              return url.pathname + '?' + url.searchParams.toString()
+            } catch {
+              return '/'
+            }
+          },
+        },
+        '/api/vrbo-ical': {
+          target: 'https://www.vrbo.com',
+          changeOrigin: true,
+          rewrite: () => {
+            try {
+              if (!vrboIcalUrl) return '/'
+              const url = new URL(vrboIcalUrl)
+              return url.pathname + '?' + url.searchParams.toString()
+            } catch {
+              return '/'
+            }
           },
         },
       },
