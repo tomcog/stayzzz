@@ -63,11 +63,10 @@ export function CalendarView({ bookings, onBookingClick }: CalendarViewProps) {
       days.push(
         <div
           key={day}
-          className={`aspect-square p-1 border ${isToday ? 'border-[var(--success)]' : 'border-gray-200'}`}
-          style={isToday ? { borderWidth: '2px' } : undefined}
+          className={`aspect-square p-1 border border-gray-200 ${isToday ? 'bg-[var(--success)]' : ''}`}
         >
           <div className="h-full flex flex-col">
-            <span className="text-center mb-1" style={isToday ? { color: 'var(--success)' } : undefined}>{day}</span>
+            <span className="text-center mb-1" style={isToday ? { color: 'white' } : undefined}>{day}</span>
             {booking && (() => {
               const status = getBookingStatus(booking, bookings);
               const isCheckIn = isCheckinDay(day, booking);
