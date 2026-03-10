@@ -4,7 +4,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { Calendar, Phone, Edit2, Trash2, Save, X, Link, Wrench, Globe } from 'lucide-react';
@@ -26,32 +25,17 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
   const [isEditing, setIsEditing] = useState(false);
   const [editedBooking, setEditedBooking] = useState(booking);
 
-  useEffect(() => { setEditedBooking(booking); }, [booking]);
+  useEffect(() => { setEditedBooking(booking); setIsEditing(false); }, [booking]);
 
-  const formatDate = (dateString: string) => parseLocalDate(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-  const getStatusColor = () => {
-    if (booking.status === 'completed') return 'bg-past';
-    if (booking.stay_type === 'guest') return booking.status === 'current' ? 'bg-guest-current' : 'bg-guest-upcoming';
-    if (booking.stay_type === 'unresolved') return 'bg-[#999999]';
-    return booking.status === 'current' ? 'bg-owner-current' : 'bg-owner-upcoming';
-  };
-
-  const getStatusLabel = () => {
-    switch (booking.status) {
-      case 'current': return 'Currently Staying';
-      case 'upcoming': return 'Upcoming';
-      case 'completed': return 'Completed';
-    }
-  };
+  const formatDate = (dateString: string) =>
+    parseLocalDate(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
   const handleSave = async () => {
     if (editedBooking.stay_type === 'unresolved') { toast.error('Please select a stay type first'); return; }
     if ((editedBooking.stay_type === 'guest' || editedBooking.stay_type === 'owner') && !editedBooking.guest_name) { toast.error('Please enter a name'); return; }
     if (editedBooking.stay_type === 'service' && !editedBooking.service_requested) { toast.error('Please enter the service requested'); return; }
-    if (!editedBooking.start_date || !editedBooking.end_date) { toast.error('Please select check-in and check-out dates'); return; }
-    if (parseLocalDate(editedBooking.end_date) <= parseLocalDate(editedBooking.start_date)) { toast.error('Check-out date must be after check-in date'); return; }
-
+    if (!editedBooking.start_date || !editedBooking.end_date) { toast.error('Please select dates'); return; }
+    if (parseLocalDate(editedBooking.end_date) <= parseLocalDate(editedBooking.start_date)) { toast.error('Check-out must be after check-in'); return; }
     try {
       await onUpdateBooking(editedBooking);
       setIsEditing(false);
@@ -65,163 +49,168 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
     toast.success('Booking deleted successfully!');
   };
 
+  const displayName = booking.stay_type === 'service'
+    ? (booking.service_requested || 'Service')
+    : booking.stay_type === 'unresolved'
+    ? 'Not Available'
+    : (booking.guest_name || (booking.stay_type === 'owner' ? 'Owner' : 'Guest'));
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" aria-describedby={undefined}>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) setIsEditing(false); onOpenChange(o); }}>
+      <SheetContent side="bottom" className="h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0" aria-describedby={undefined}>
         <SheetTitle className="sr-only">Booking Details</SheetTitle>
+
         {!isEditing ? (
-          <div className="space-y-6 px-4">
-            {booking.stay_type === 'owner' && (
-              <div className="p-4 bg-owner-light border border-owner-border rounded-lg">
-                <p className="text-sm text-owner-text">This is an owner blocking. The property is unavailable for guest bookings during these dates.</p>
-              </div>
-            )}
-            {booking.stay_type === 'service' && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700">This is a service appointment. No guest bookings during this time.</p>
-              </div>
-            )}
-            {booking.stay_type === 'unresolved' && (
-              <div className="p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-                <p className="text-sm text-yellow-800">This booking needs to be classified. Tap Edit to set the stay type.</p>
-              </div>
-            )}
+          <div className="flex flex-col h-full">
+            <div className="flex-1 px-4 py-6 flex flex-col gap-4">
 
-            <div>
-              {/* Header with close button */}
-              <div className="flex items-center gap-3 mb-[16px] mt-[8px]">
-                <button onClick={() => onOpenChange(false)} className={`h-12 w-12 rounded-full shadow-lg flex items-center justify-center flex-shrink-0 ${booking.stay_type === 'guest' ? 'bg-black hover:bg-black/90' : 'bg-white hover:bg-gray-50'}`} aria-label="Close">
-                  <X className={`w-5 h-5 ${booking.stay_type === 'guest' ? 'text-white' : 'text-gray-500'}`} />
-                </button>
-                {booking.stay_type === 'guest' && <h2 className="m-0">{booking.guest_name}</h2>}
-                {booking.stay_type === 'owner' && (
-                  <div className="flex flex-col">
-                    <h2 className="m-0">{booking.guest_name || 'Owner'}</h2>
-                    <Badge className={`${getStatusColor()} w-fit`}>{getStatusLabel()}</Badge>
-                  </div>
-                )}
-                {booking.stay_type === 'service' && <h2 className="m-0">{booking.service_requested || 'Service'}</h2>}
-                {booking.stay_type === 'unresolved' && <h2 className="m-0">Not available</h2>}
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div><p className="text-gray-600">Check-in</p><p>{formatDate(booking.start_date)}</p></div>
+              {/* Unresolved banner */}
+              {booking.stay_type === 'unresolved' && (
+                <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                  <p className="text-sm text-yellow-800">This booking needs attention. Tap Edit to set the stay type.</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div><p className="text-gray-600">Check-out</p><p>{formatDate(booking.end_date)}</p></div>
+              )}
+
+              {/* Name heading */}
+              <h2 className="text-[20px] font-bold uppercase m-0 leading-tight">{displayName}</h2>
+
+              {/* Detail rows */}
+              <div className="flex flex-col gap-4">
+
+                {/* Check-in */}
+                <div className="flex gap-3 items-start">
+                  <Calendar className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[16px] text-[#4a5565] leading-6">Check-in</p>
+                    <p className="text-[16px] text-black leading-6">{formatDate(booking.start_date)}</p>
+                  </div>
                 </div>
 
-                {booking.stay_type === 'guest' && booking.phone_number && (
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                {/* Check-out */}
+                <div className="flex gap-3 items-start">
+                  <Calendar className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[16px] text-[#4a5565] leading-6">Check-out</p>
+                    <p className="text-[16px] text-black leading-6">{formatDate(booking.end_date)}</p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                {booking.phone_number && (
+                  <div className="flex gap-3 items-start">
+                    <Phone className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-gray-600">Phone</p>
-                      <a href={`tel:${booking.phone_number}`} className="hover:underline" style={{ color: '#118AB2' }}>{formatPhoneNumber(booking.phone_number)}</a>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Phone</p>
+                      <a href={`tel:${booking.phone_number}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
+                        {formatPhoneNumber(booking.phone_number)}
+                      </a>
                     </div>
                   </div>
                 )}
 
-                {booking.stay_type === 'guest' && booking.booking_url && (
-                  <div className="flex items-start gap-3">
-                    <Link className="w-5 h-5 text-gray-500 mt-0.5" />
+                {/* Booking link */}
+                {booking.booking_url && (
+                  <div className="flex gap-3 items-start">
+                    <Link className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-gray-600">Booking link</p>
-                      <a href={booking.booking_url} target="_blank" rel="noopener noreferrer" className="hover:underline break-all" style={{ color: '#118AB2' }}>{booking.booking_url}</a>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Booking link</p>
+                      <a href={booking.booking_url} target="_blank" rel="noopener noreferrer" className="text-[16px] leading-6 hover:underline break-all" style={{ color: '#118AB2' }}>
+                        {booking.booking_url}
+                      </a>
                     </div>
                   </div>
                 )}
 
-                {booking.stay_type === 'guest' && (
-                  <div className="flex items-end gap-4">
-                    <div className="flex-1" style={{ maxWidth: '150px' }}>
-                      <Label htmlFor="view-poolHeat">Pool heat</Label>
-                      <Select
-                        value={booking.pool_heat || 'not-asked'}
-                        onValueChange={async (value) => {
-                          const updatedBooking = { ...booking, pool_heat: value as Booking['pool_heat'] };
-                          try {
-                            await onUpdateBooking(updatedBooking);
-                            toast.success('Pool heat status updated');
-                          } catch (error) {
-                            console.error('Failed to update pool heat:', error);
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="view-poolHeat"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.values(POOL_HEAT_STATUSES).map((status) => (
-                            <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Service view fields */}
+                {/* Service provider */}
                 {booking.stay_type === 'service' && booking.provider_name && (
-                  <div className="flex items-start gap-3">
-                    <Wrench className="w-5 h-5 text-gray-500 mt-0.5" />
-                    <div><p className="text-gray-600">Provider</p><p>{booking.provider_name}</p></div>
+                  <div className="flex gap-3 items-start">
+                    <Wrench className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Provider</p>
+                      <p className="text-[16px] text-black leading-6">{booking.provider_name}</p>
+                    </div>
                   </div>
                 )}
                 {booking.stay_type === 'service' && booking.provider_contact && (
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex gap-3 items-start">
+                    <Phone className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-gray-600">Provider contact</p>
-                      <a href={`tel:${booking.provider_contact}`} className="hover:underline" style={{ color: '#118AB2' }}>{formatPhoneNumber(booking.provider_contact)}</a>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Provider contact</p>
+                      <a href={`tel:${booking.provider_contact}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
+                        {formatPhoneNumber(booking.provider_contact)}
+                      </a>
                     </div>
                   </div>
                 )}
                 {booking.stay_type === 'service' && booking.provider_url && (
-                  <div className="flex items-start gap-3">
-                    <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex gap-3 items-start">
+                    <Globe className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-gray-600">Provider website</p>
-                      <a href={booking.provider_url} target="_blank" rel="noopener noreferrer" className="hover:underline break-all" style={{ color: '#118AB2' }}>{booking.provider_url}</a>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Provider website</p>
+                      <a href={booking.provider_url} target="_blank" rel="noopener noreferrer" className="text-[16px] leading-6 hover:underline break-all" style={{ color: '#118AB2' }}>
+                        {booking.provider_url}
+                      </a>
                     </div>
                   </div>
                 )}
                 {booking.stay_type === 'service' && (booking.service_date || booking.service_time) && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex gap-3 items-start">
+                    <Calendar className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-gray-600">Service date/time</p>
-                      <p>{[booking.service_date, booking.service_time].filter(Boolean).join(' at ')}</p>
-                    </div>
-                  </div>
-                )}
-                {booking.stay_type === 'service' && booking.contact_phone && (
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                    <div>
-                      <p className="text-gray-600">Contact phone</p>
-                      <a href={`tel:${booking.contact_phone}`} className="hover:underline" style={{ color: '#118AB2' }}>{formatPhoneNumber(booking.contact_phone)}</a>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Service date/time</p>
+                      <p className="text-[16px] text-black leading-6">{[booking.service_date, booking.service_time].filter(Boolean).join(' at ')}</p>
                     </div>
                   </div>
                 )}
 
+                {/* Pool heat — guest only, inline dropdown */}
+                {booking.stay_type === 'guest' && (
+                  <div className="w-[160px]">
+                    <Label htmlFor="view-poolHeat" className="text-[14px]">Pool heat</Label>
+                    <Select
+                      value={booking.pool_heat || 'not-asked'}
+                      onValueChange={async (value) => {
+                        try {
+                          await onUpdateBooking({ ...booking, pool_heat: value as Booking['pool_heat'] });
+                        } catch (error) {
+                          console.error('Failed to update pool heat:', error);
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="view-poolHeat" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(POOL_HEAT_STATUSES).map((status) => (
+                          <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Notes */}
                 {booking.notes && (
                   <div>
-                    <p className="text-gray-600 mb-2">Notes</p>
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-md">{booking.notes}</p>
+                    <p className="text-[16px] text-[#4a5565] leading-6 mb-1">Notes</p>
+                    <p className="text-[16px] text-black leading-6">{booking.notes}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button onClick={() => setIsEditing(true)} variant="outline" className="flex-1 gap-2">
+            {/* Footer buttons */}
+            <div className="flex gap-4 px-4 py-6">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-[44px] rounded-[4px] border-[rgba(0,0,0,0.1)] text-[14px]">
+                Close
+              </Button>
+              <Button onClick={() => setIsEditing(true)} className="flex-1 h-[44px] rounded-[4px] bg-cta hover:bg-cta/90 text-[14px] gap-2">
                 <Edit2 className="w-4 h-4" />Edit
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex-1 gap-2">
-                    <Trash2 className="w-4 h-4" />Delete
+                  <Button className="w-12 h-[44px] rounded-[4px] shrink-0 gap-0 p-0" style={{ backgroundColor: '#EE5A7B' }}>
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -238,122 +227,117 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
             </div>
           </div>
         ) : (
-          <div className="space-y-4 px-4">
-            <div className="flex items-center gap-3 mb-4 mt-2">
-              <button onClick={() => onOpenChange(false)} className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 flex items-center justify-center flex-shrink-0" aria-label="Close">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-              <h2 className="m-0">Edit Booking</h2>
-            </div>
+          <div className="flex flex-col h-full">
+            <div className="flex-1 px-4 py-6 flex flex-col gap-4">
+              <h2 className="text-[18px] font-semibold uppercase tracking-wide m-0">Edit Booking</h2>
 
-            {/* Stay type selector — only shown for unresolved bookings */}
-            {editedBooking.stay_type === 'unresolved' && (
-              <div className="p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-                <Label htmlFor="edit-stayType">What type of stay is this? *</Label>
-                <Select value="" onValueChange={(v) => setEditedBooking({ ...editedBooking, stay_type: v as Booking['stay_type'] })}>
-                  <SelectTrigger id="edit-stayType" className="mt-2"><SelectValue placeholder="Select stay type..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="guest">Guest</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                    <SelectItem value="service">Service</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Type selector — only for unresolved */}
+              {editedBooking.stay_type === 'unresolved' && (
+                <div>
+                  <Label htmlFor="edit-stayType" className="text-[14px]">What type of stay is this? *</Label>
+                  <Select value="" onValueChange={(v) => setEditedBooking({ ...editedBooking, stay_type: v as Booking['stay_type'] })}>
+                    <SelectTrigger id="edit-stayType" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]">
+                      <SelectValue placeholder="Select stay type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="guest">Guest</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                      <SelectItem value="service">Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Name — guest/owner */}
+              {(editedBooking.stay_type === 'guest' || editedBooking.stay_type === 'owner') && (
+                <div>
+                  <Label htmlFor="edit-name" className="text-[14px]">{editedBooking.stay_type === 'owner' ? 'Owner Name *' : 'Guest Name *'}</Label>
+                  <Input id="edit-name" value={editedBooking.guest_name} onChange={(e) => setEditedBooking({ ...editedBooking, guest_name: e.target.value })} className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="edit-startDate" className="text-[14px]">Check-in *</Label>
+                  <Input id="edit-startDate" type="date" value={editedBooking.start_date} onChange={(e) => setEditedBooking({ ...editedBooking, start_date: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="edit-endDate" className="text-[14px]">Check-out *</Label>
+                  <Input id="edit-endDate" type="date" value={editedBooking.end_date} onChange={(e) => setEditedBooking({ ...editedBooking, end_date: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                </div>
               </div>
-            )}
 
-            {/* Guest/Owner name */}
-            {(editedBooking.stay_type === 'guest' || editedBooking.stay_type === 'owner') && (
-              <div className="my-[16px] mx-[0px]">
-                <Label htmlFor="edit-guestName">{editedBooking.stay_type === 'owner' ? 'Owner Name *' : 'Guest Name *'}</Label>
-                <Input id="edit-guestName" value={editedBooking.guest_name} onChange={(e) => setEditedBooking({ ...editedBooking, guest_name: e.target.value })} className="py-[14px] px-[12px]" />
-              </div>
-            )}
-
-            {/* Dates — shown for all types */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-startDate">Check-in *</Label>
-                <Input id="edit-startDate" type="date" value={editedBooking.start_date} onChange={(e) => setEditedBooking({ ...editedBooking, start_date: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="edit-endDate">Check-out *</Label>
-                <Input id="edit-endDate" type="date" value={editedBooking.end_date} onChange={(e) => setEditedBooking({ ...editedBooking, end_date: e.target.value })} />
-              </div>
-            </div>
-
-            {/* Guest-specific fields */}
-            {editedBooking.stay_type === 'guest' && (
-              <>
-                <div>
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input id="edit-phone" type="tel" value={editedBooking.phone_number} onChange={(e) => setEditedBooking({ ...editedBooking, phone_number: e.target.value })} />
-                </div>
-                <div>
-                  <Label htmlFor="edit-bookingUrl">Booking link</Label>
-                  <Input id="edit-bookingUrl" type="url" value={editedBooking.booking_url} onChange={(e) => setEditedBooking({ ...editedBooking, booking_url: e.target.value })} placeholder="https://..." />
-                </div>
-                <div className="flex items-end gap-4">
-                  <div className="flex-1" style={{ maxWidth: '150px' }}>
-                    <Label htmlFor="edit-poolHeat">Pool heat</Label>
-                    <Select value={editedBooking.pool_heat || 'not-asked'} onValueChange={(v) => setEditedBooking({ ...editedBooking, pool_heat: v as Booking['pool_heat'] })}>
-                      <SelectTrigger id="edit-poolHeat"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.values(POOL_HEAT_STATUSES).map((status) => (
-                          <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Service-specific fields */}
-            {editedBooking.stay_type === 'service' && (
-              <>
-                <div>
-                  <Label htmlFor="edit-serviceRequested">Service requested *</Label>
-                  <Input id="edit-serviceRequested" value={editedBooking.service_requested || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_requested: e.target.value })} placeholder="e.g., Pool cleaning, HVAC maintenance" />
-                </div>
-                <div>
-                  <Label htmlFor="edit-providerName">Provider name</Label>
-                  <Input id="edit-providerName" value={editedBooking.provider_name || ''} onChange={(e) => setEditedBooking({ ...editedBooking, provider_name: e.target.value })} placeholder="Provider or company name" />
-                </div>
-                <div>
-                  <Label htmlFor="edit-providerContact">Provider contact</Label>
-                  <Input id="edit-providerContact" type="tel" value={editedBooking.provider_contact || ''} onChange={(e) => setEditedBooking({ ...editedBooking, provider_contact: e.target.value })} placeholder="Phone number" />
-                </div>
-                <div>
-                  <Label htmlFor="edit-providerUrl">Provider website</Label>
-                  <Input id="edit-providerUrl" type="url" value={editedBooking.provider_url || ''} onChange={(e) => setEditedBooking({ ...editedBooking, provider_url: e.target.value })} placeholder="https://..." />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="edit-serviceDate">Service date</Label>
-                    <Input id="edit-serviceDate" type="date" value={editedBooking.service_date || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_date: e.target.value })} />
+              {/* Guest fields */}
+              {editedBooking.stay_type === 'guest' && (
+                <>
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="edit-phone" className="text-[14px]">Phone</Label>
+                      <Input id="edit-phone" type="tel" value={editedBooking.phone_number} onChange={(e) => setEditedBooking({ ...editedBooking, phone_number: e.target.value })} placeholder="+1 (555) 123-4567" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    </div>
+                    <div className="w-[160px] shrink-0">
+                      <Label htmlFor="edit-poolHeat" className="text-[14px]">Pool heat</Label>
+                      <Select value={editedBooking.pool_heat || 'not-asked'} onValueChange={(v) => setEditedBooking({ ...editedBooking, pool_heat: v as Booking['pool_heat'] })}>
+                        <SelectTrigger id="edit-poolHeat" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(POOL_HEAT_STATUSES).map((status) => (
+                            <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor="edit-serviceTime">Service time</Label>
-                    <Input id="edit-serviceTime" type="time" value={editedBooking.service_time || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_time: e.target.value })} />
+                    <Label htmlFor="edit-bookingUrl" className="text-[14px]">Booking info</Label>
+                    <Input id="edit-bookingUrl" type="url" value={editedBooking.booking_url} onChange={(e) => setEditedBooking({ ...editedBooking, booking_url: e.target.value })} placeholder="Booking URL" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="edit-contactPhone">Contact phone</Label>
-                  <Input id="edit-contactPhone" type="tel" value={editedBooking.contact_phone || ''} onChange={(e) => setEditedBooking({ ...editedBooking, contact_phone: e.target.value })} placeholder="Your contact number for the provider" />
-                </div>
-              </>
-            )}
+                </>
+              )}
 
-            <div>
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea id="edit-notes" value={editedBooking.notes || ''} onChange={(e) => setEditedBooking({ ...editedBooking, notes: e.target.value })} rows={3} />
+              {/* Service fields */}
+              {editedBooking.stay_type === 'service' && (
+                <>
+                  <div>
+                    <Label htmlFor="edit-serviceRequested" className="text-[14px]">Service requested *</Label>
+                    <Input id="edit-serviceRequested" value={editedBooking.service_requested || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_requested: e.target.value })} placeholder="e.g., Pool cleaning" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="edit-providerName" className="text-[14px]">Provider name</Label>
+                      <Input id="edit-providerName" value={editedBooking.provider_name || ''} onChange={(e) => setEditedBooking({ ...editedBooking, provider_name: e.target.value })} className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="edit-providerContact" className="text-[14px]">Contact</Label>
+                      <Input id="edit-providerContact" type="tel" value={editedBooking.provider_contact || ''} onChange={(e) => setEditedBooking({ ...editedBooking, provider_contact: e.target.value })} className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="edit-serviceDate" className="text-[14px]">Date</Label>
+                      <Input id="edit-serviceDate" type="date" value={editedBooking.service_date || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_date: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="edit-serviceTime" className="text-[14px]">Time</Label>
+                      <Input id="edit-serviceTime" type="time" value={editedBooking.service_time || ''} onChange={(e) => setEditedBooking({ ...editedBooking, service_time: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Notes */}
+              <div>
+                <Label htmlFor="edit-notes" className="text-[14px]">Notes</Label>
+                <Textarea id="edit-notes" value={editedBooking.notes || ''} onChange={(e) => setEditedBooking({ ...editedBooking, notes: e.target.value })} placeholder="Any special requests or notes..." rows={3} className="mt-1 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+              </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button onClick={() => { setEditedBooking(booking); setIsEditing(false); }} variant="outline" className="flex-1 gap-2 !rounded-full">
+            {/* Footer buttons */}
+            <div className="flex gap-4 px-4 py-6">
+              <Button variant="outline" onClick={() => { setEditedBooking(booking); setIsEditing(false); }} className="flex-1 h-[44px] rounded-[4px] border-[rgba(0,0,0,0.1)] text-[14px] gap-2">
                 <X className="w-4 h-4" />Cancel
               </Button>
-              <Button onClick={handleSave} className="flex-1 gap-2 !rounded-full">
+              <Button onClick={handleSave} className="flex-1 h-[44px] rounded-[4px] bg-cta hover:bg-cta/90 text-[14px] gap-2">
                 <Save className="w-4 h-4" />Save
               </Button>
             </div>
