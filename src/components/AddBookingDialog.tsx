@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -80,125 +80,156 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
     }
   };
 
+  const namePlaceholder = bookingType === 'guest' ? 'Guest name' : bookingType === 'owner' ? 'Owner name' : 'Provider name';
+  const nameLabel = bookingType === 'guest' ? 'Guest Name *' : bookingType === 'owner' ? 'Owner Name *' : 'Provider Name';
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto top-[5%] translate-y-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <DialogHeader className="text-left">
-          <DialogTitle>Add New Booking</DialogTitle>
-          <DialogDescription>Create a new guest, owner, or service booking for your rental property.</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
+      <SheetContent side="bottom" className="h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0" aria-describedby={undefined}>
+        <SheetTitle className="sr-only">Add New Booking</SheetTitle>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <Label htmlFor="booking-type">Booking type</Label>
-            <Select value={bookingType} onValueChange={(v) => setBookingType(v as 'guest' | 'owner' | 'service')}>
-              <SelectTrigger id="booking-type" className="mt-2"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="guest">Guest</SelectItem>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="service">Service</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Header */}
+        <div className="px-4 py-6">
+          <h2 className="text-[18px] font-semibold uppercase tracking-wide m-0">Add New Booking</h2>
+        </div>
 
-          {bookingType !== 'service' && (
-            <div>
-              <Label htmlFor="guestName">{bookingType === 'guest' ? 'Guest Name *' : 'Owner Name *'}</Label>
-              <Input id="guestName" value={formData.guest_name} onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })} />
-            </div>
-          )}
+        <form onSubmit={handleSubmit}>
+          <div className="px-4 flex flex-col gap-4">
 
-          {bookingType === 'service' && (
-            <>
-              <div>
-                <Label htmlFor="serviceRequested">Service requested *</Label>
-                <Input id="serviceRequested" value={formData.service_requested} onChange={(e) => setFormData({ ...formData, service_requested: e.target.value })} placeholder="e.g., Pool cleaning, HVAC maintenance" />
-              </div>
-              <div>
-                <Label htmlFor="providerName">Provider name</Label>
-                <Input id="providerName" value={formData.provider_name} onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })} placeholder="Provider or company name" />
-              </div>
-              <div>
-                <Label htmlFor="providerContact">Provider contact</Label>
-                <Input id="providerContact" type="tel" value={formData.provider_contact} onChange={(e) => setFormData({ ...formData, provider_contact: e.target.value })} placeholder="Phone number" />
-              </div>
-              <div>
-                <Label htmlFor="providerUrl">Provider website</Label>
-                <Input id="providerUrl" type="url" value={formData.provider_url} onChange={(e) => setFormData({ ...formData, provider_url: e.target.value })} placeholder="https://..." />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="serviceDate">Service date</Label>
-                  <Input id="serviceDate" type="date" value={formData.service_date} onChange={(e) => setFormData({ ...formData, service_date: e.target.value })} />
-                </div>
-                <div>
-                  <Label htmlFor="serviceTime">Service time</Label>
-                  <Input id="serviceTime" type="time" value={formData.service_time} onChange={(e) => setFormData({ ...formData, service_time: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="contactPhone">Contact phone</Label>
-                <Input id="contactPhone" type="tel" value={formData.contact_phone} onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })} placeholder="Your contact number for the provider" />
-              </div>
-            </>
-          )}
-
-          <div>
-            <Label>Dates *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>{format(dateRange.from, "LLL dd, y")} – {format(dateRange.to, "LLL dd, y")}</>
-                    ) : format(dateRange.from, "LLL dd, y")
-                  ) : <span>Pick dates</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {bookingType === 'guest' && (
-            <>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" type="tel" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} placeholder="+1 (555) 123-4567" />
-              </div>
-
-              <div>
-                <Label htmlFor="bookingUrl">Booking link</Label>
-                <Input id="bookingUrl" type="url" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} placeholder="https://..." />
-              </div>
-
-              <div>
-                <Label htmlFor="poolHeat">Pool heat</Label>
-                <Select value={formData.pool_heat} onValueChange={(v) => setFormData({ ...formData, pool_heat: v as Booking['pool_heat'] })}>
-                  <SelectTrigger id="poolHeat"><SelectValue /></SelectTrigger>
+            {/* Row 1: Type + Name */}
+            <div className="flex gap-4 items-end">
+              <div className="w-[130px] shrink-0">
+                <Label htmlFor="booking-type" className="text-[14px]">Type</Label>
+                <Select value={bookingType} onValueChange={(v) => { setBookingType(v as 'guest' | 'owner' | 'service'); setFormData(emptyForm); }}>
+                  <SelectTrigger id="booking-type" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.values(POOL_HEAT_STATUSES).map((status) => (
-                      <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
-                    ))}
+                    <SelectItem value="guest">Guest</SelectItem>
+                    <SelectItem value="owner">Owner</SelectItem>
+                    <SelectItem value="service">Service</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </>
-          )}
+              <div className="flex-1">
+                <Label htmlFor="primaryName" className="text-[14px]">{nameLabel}</Label>
+                <Input
+                  id="primaryName"
+                  value={bookingType === 'service' ? formData.provider_name : formData.guest_name}
+                  onChange={(e) => setFormData(bookingType === 'service'
+                    ? { ...formData, provider_name: e.target.value }
+                    : { ...formData, guest_name: e.target.value }
+                  )}
+                  placeholder={namePlaceholder}
+                  className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]"
+                />
+              </div>
+            </div>
 
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any special requests or notes..." rows={3} />
+            {/* Row 2: Stay Dates */}
+            <div>
+              <Label className="text-[14px]">Stay Dates *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal mt-1 h-9 text-[14px] border-[rgba(0,0,0,0.1)] rounded-[8px]", !dateRange && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    {dateRange?.from ? (
+                      dateRange.to
+                        ? <>{format(dateRange.from, "MMM d, yyyy")} – {format(dateRange.to, "MMM d, yyyy")}</>
+                        : format(dateRange.from, "MMM d, yyyy")
+                    ) : <span>Pick check-in and check-out dates</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Guest-specific rows */}
+            {bookingType === 'guest' && (
+              <>
+                {/* Row 3: Phone + Pool heat */}
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="phone" className="text-[14px]">Phone</Label>
+                    <Input id="phone" type="tel" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} placeholder="+1 (555) 123-4567" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                  <div className="w-[160px] shrink-0">
+                    <Label htmlFor="poolHeat" className="text-[14px]">Pool heat</Label>
+                    <Select value={formData.pool_heat} onValueChange={(v) => setFormData({ ...formData, pool_heat: v as Booking['pool_heat'] })}>
+                      <SelectTrigger id="poolHeat" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.values(POOL_HEAT_STATUSES).map((status) => (
+                          <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 4: Booking info */}
+                <div>
+                  <Label htmlFor="bookingUrl" className="text-[14px]">Booking info</Label>
+                  <Input id="bookingUrl" type="url" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} placeholder="Booking URL" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                </div>
+              </>
+            )}
+
+            {/* Owner-specific rows */}
+            {bookingType === 'owner' && (
+              <div>
+                <Label htmlFor="ownerBookingUrl" className="text-[14px]">Booking info</Label>
+                <Input id="ownerBookingUrl" type="url" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} placeholder="Booking URL" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+              </div>
+            )}
+
+            {/* Service-specific rows */}
+            {bookingType === 'service' && (
+              <>
+                <div>
+                  <Label htmlFor="serviceRequested" className="text-[14px]">Service requested *</Label>
+                  <Input id="serviceRequested" value={formData.service_requested} onChange={(e) => setFormData({ ...formData, service_requested: e.target.value })} placeholder="e.g., Pool cleaning, HVAC maintenance" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                </div>
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="providerContact" className="text-[14px]">Provider contact</Label>
+                    <Input id="providerContact" type="tel" value={formData.provider_contact} onChange={(e) => setFormData({ ...formData, provider_contact: e.target.value })} placeholder="Phone number" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="providerUrl" className="text-[14px]">Website</Label>
+                    <Input id="providerUrl" type="url" value={formData.provider_url} onChange={(e) => setFormData({ ...formData, provider_url: e.target.value })} placeholder="https://..." className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                </div>
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="serviceDate" className="text-[14px]">Service date</Label>
+                    <Input id="serviceDate" type="date" value={formData.service_date} onChange={(e) => setFormData({ ...formData, service_date: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="serviceTime" className="text-[14px]">Service time</Label>
+                    <Input id="serviceTime" type="time" value={formData.service_time} onChange={(e) => setFormData({ ...formData, service_time: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Notes — all types */}
+            <div>
+              <Label htmlFor="notes" className="text-[14px]">Notes</Label>
+              <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any special requests or notes..." rows={3} className="mt-1 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+            </div>
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 rounded-[38px]">Cancel</Button>
-            <Button type="submit" className="flex-1">Add Booking</Button>
+          {/* Buttons */}
+          <div className="flex gap-2 px-4 py-6 mt-2">
+            <Button type="button" variant="outline" onClick={() => { resetForm(); onOpenChange(false); }} className="flex-1 h-9 rounded-[4px] border-[rgba(0,0,0,0.1)] text-[14px]">Cancel</Button>
+            <Button type="submit" className="flex-1 h-9 rounded-[4px] bg-cta hover:bg-cta/90 text-[14px]">Add Booking</Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
