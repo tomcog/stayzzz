@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Calendar, Phone, Edit2, Trash2, Save, X, Link, Wrench, Globe } from 'lucide-react';
+import { Calendar, Phone, Edit2, Trash2, Save, X, Link, Wrench, Globe, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Booking } from '../App';
 import { parseLocalDate } from '../utils/dateUtils';
@@ -46,7 +46,11 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
 
   const handleDelete = () => {
     onDeleteBooking(booking.id);
-    toast.success('Booking deleted successfully!');
+  };
+
+  const handleHide = async () => {
+    await onUpdateBooking({ ...booking, hidden: true });
+    onOpenChange(false);
   };
 
   const displayName = booking.stay_type === 'service'
@@ -207,6 +211,23 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
               <Button onClick={() => setIsEditing(true)} className="flex-1 h-[44px] rounded-[4px] bg-cta hover:bg-cta/90 text-[14px] gap-2">
                 <Edit2 className="w-4 h-4" />Edit
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="w-12 h-[44px] rounded-[4px] shrink-0 gap-0 p-0 border-[rgba(0,0,0,0.1)]">
+                    <EyeOff className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hide Booking?</AlertDialogTitle>
+                    <AlertDialogDescription>This booking will be hidden from the app. You can unhide it from the database.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleHide}>Hide</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button className="w-12 h-[44px] rounded-[4px] shrink-0 gap-0 p-0" style={{ backgroundColor: '#EE5A7B' }}>

@@ -38,6 +38,7 @@ export interface Booking {
   service_date?: string;
   service_time?: string;
   contact_phone?: string;
+  hidden?: boolean;
 }
 
 const API_URL = `https://${projectId}.supabase.co/rest/v1`;
@@ -76,7 +77,7 @@ export default function App() {
   const fetchBookings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_URL}/rentals?select=*`, { headers });
+      const response = await fetch(`${API_URL}/rentals?select=*&hidden=not.is.true`, { headers });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -135,11 +136,7 @@ export default function App() {
       ]);
       await fetchBookings();
       const totalNew = airbnbResult.inserted + vrboResult.inserted;
-      toast.success(
-        totalNew > 0
-          ? `${totalNew} new ${totalNew === 1 ? 'booking' : 'bookings'} synced`
-          : 'Up to date — no new bookings'
-      );
+      void totalNew;
     } catch (error) {
       console.error('Sync failed:', error);
       await fetchBookings();
@@ -202,7 +199,6 @@ export default function App() {
 
     setBookings(prev => prev.map(b => b.id === bookingWithDefaults.id ? bookingWithDefaults : b));
     if (selectedBooking?.id === bookingWithDefaults.id) setSelectedBooking(bookingWithDefaults);
-    toast.success('Booking updated successfully');
   };
 
   const handleDeleteBooking = async (id: string) => {
