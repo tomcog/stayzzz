@@ -197,8 +197,12 @@ export default function App() {
       throw new Error(`Failed to update booking: ${response.status} ${errorText}`);
     }
 
-    setBookings(prev => prev.map(b => b.id === bookingWithDefaults.id ? bookingWithDefaults : b));
-    if (selectedBooking?.id === bookingWithDefaults.id) setSelectedBooking(bookingWithDefaults);
+    if (bookingWithDefaults.hidden) {
+      setBookings(prev => prev.filter(b => b.id !== bookingWithDefaults.id));
+    } else {
+      setBookings(prev => prev.map(b => b.id === bookingWithDefaults.id ? bookingWithDefaults : b));
+      if (selectedBooking?.id === bookingWithDefaults.id) setSelectedBooking(bookingWithDefaults);
+    }
   };
 
   const handleDeleteBooking = async (id: string) => {
