@@ -14,6 +14,7 @@ import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from '.
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
 import { getAppAlerts, type AppAlert } from './lib/appAlerts';
+import { buildShareMessage, SMS_RECIPIENTS } from './utils/shareMessage';
 import { AlertsModal } from './components/AlertsModal';
 
 export interface Booking {
@@ -235,35 +236,8 @@ export default function App() {
   };
 
   const handleShare = () => {
-    const upcoming = bookings
-      .filter(b => b.status === 'upcoming' && b.stay_type === 'guest' && !b.hidden)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-
-    const formatStartDate = (dateStr: string) => {
-      const d = parseLocalDate(dateStr);
-      const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-      const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${weekday} ${monthDay}`;
-    };
-
-    const formatEndDate = (dateStr: string) =>
-      parseLocalDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    const formatGuestInfo = (b: Booking) =>
-      `${b.guest_name}${b.phone_number ? ` ${b.phone_number}` : ''} staying ${formatStartDate(b.start_date)} to ${formatEndDate(b.end_date)}`;
-
-    let body = '';
-    if (upcoming.length === 0) {
-      body = 'No upcoming guests scheduled.';
-    } else if (upcoming.length === 1) {
-      body = `Next guest at 1935 E. Andreas is ${formatGuestInfo(upcoming[0])}.`;
-    } else {
-      body = `Next guest at 1935 E. Andreas is ${formatGuestInfo(upcoming[0])}, followed by ${formatGuestInfo(upcoming[1])}.`;
-    }
-    body += ' Latest info at https://stayzzz.vercel.app';
-
-    const recipients = '4157864282,4422184858,7609698962';
-    const smsUrl = `sms:/open?addresses=${recipients}&body=${encodeURIComponent(body)}`;
+    const body = buildShareMessage(bookings);
+    const smsUrl = `sms:/open?addresses=${SMS_RECIPIENTS}&body=${encodeURIComponent(body)}`;
     window.location.href = smsUrl;
   };
 
@@ -400,7 +374,7 @@ export default function App() {
       </div>
 
       {pendingAlerts.length > 0 && (
-        <AlertsModal alerts={pendingAlerts} onClose={() => setPendingAlerts([])} />
+        <AlertsModal alerts={pendingAlerts} bookings={bookings} onClose={() => setPendingAlerts([])} />
       )}
 
       <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />

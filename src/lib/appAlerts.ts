@@ -16,6 +16,7 @@ export interface AppAlert {
   id: string;
   message: string;
   type: 'warning' | 'info';
+  shareAction?: boolean;
 }
 
 function getNowPacific() {
@@ -90,6 +91,24 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
           message: `${name} arrives tomorrow for ${nights} ${nights === 1 ? 'night' : 'nights'}.`,
           type: 'info',
         });
+      }
+    }
+
+    // 1-week-before alert: share upcoming guests with the crew
+    {
+      const [year, month, day] = booking.start_date.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day);
+      const diffDays = Math.ceil((startDate.getTime() - nowPacific.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays > 0 && diffDays <= 7) {
+        const id = `share-crew-${booking.id}`;
+        if (!dismissed.has(id)) {
+          alerts.push({
+            id,
+            message: 'Let the crew know about upcoming guests',
+            type: 'info',
+            shareAction: true,
+          });
+        }
       }
     }
 
