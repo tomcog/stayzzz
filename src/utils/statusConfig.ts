@@ -81,9 +81,8 @@ export const getBookingStatus = (booking: Booking, allBookings?: Booking[]): Boo
   endDate.setHours(0, 0, 0, 0);
 
   const isCheckInDay = startDate.getTime() === today.getTime();
-  const isCheckOutDay = endDate.getTime() === today.getTime();
   const isTomorrow = startDate.getTime() === tomorrow.getTime();
-  const isCurrent = today >= startDate && today < endDate;
+  const isCurrent = today >= startDate && today <= endDate;
   const isPast = today > endDate;
   const isUpcoming = today < startDate;
 
@@ -104,7 +103,6 @@ export const getBookingStatus = (booking: Booking, allBookings?: Booking[]): Boo
 
   if (isPast) return BOOKING_STATUSES[`${prefix}-past`];
   else if (isCheckInDay) return BOOKING_STATUSES[`${prefix}-arrive`];
-  else if (isCheckOutDay) return BOOKING_STATUSES[`${prefix}-leave`];
   else if (isCurrent) return BOOKING_STATUSES[`${prefix}-current`];
   else if (isTomorrow) return BOOKING_STATUSES[`${prefix}-tomorrow`];
   else if (isUpcoming) return BOOKING_STATUSES[`${prefix}-upcoming`];

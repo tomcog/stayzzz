@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Home, Calendar, RefreshCw, Search, XCircle } from 'lucide-react';
+import { Home, Calendar, RefreshCw, Search, XCircle, Share } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { BookingList } from './components/BookingList';
 import { CalendarView } from './components/CalendarView';
@@ -13,6 +13,8 @@ import { projectId, publicAnonKey } from './utils/supabase/info';
 import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from './utils/dateUtils';
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
+import { getAppAlerts, type AppAlert } from './lib/appAlerts';
+import { AlertsModal } from './components/AlertsModal';
 
 export interface Booking {
   id: string;
@@ -39,6 +41,7 @@ export interface Booking {
   service_time?: string;
   contact_phone?: string;
   hidden?: boolean;
+  total_rent?: number;
 }
 
 const API_URL = `https://${projectId}.supabase.co/rest/v1`;
@@ -108,6 +111,16 @@ export default function App() {
     ]);
     await fetchBookings();
   };
+
+  const [pendingAlerts, setPendingAlerts] = useState<AppAlert[]>([]);
+  const hasCheckedAlerts = useRef(false);
+  useEffect(() => {
+    if (!isLoading && bookings.length > 0 && !hasCheckedAlerts.current) {
+      hasCheckedAlerts.current = true;
+      const alerts = getAppAlerts(bookings);
+      if (alerts.length > 0) setPendingAlerts(alerts);
+    }
+  }, [isLoading, bookings]);
 
   useEffect(() => { syncAndFetch(); }, []);
 
@@ -221,6 +234,39 @@ export default function App() {
     setIsDetailsSheetOpen(true);
   };
 
+  const handleShare = () => {
+    const upcoming = bookings
+      .filter(b => b.status === 'upcoming' && b.stay_type === 'guest' && !b.hidden)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+    const formatStartDate = (dateStr: string) => {
+      const d = parseLocalDate(dateStr);
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${weekday} ${monthDay}`;
+    };
+
+    const formatEndDate = (dateStr: string) =>
+      parseLocalDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const formatGuestInfo = (b: Booking) =>
+      `${b.guest_name}${b.phone_number ? ` ${b.phone_number}` : ''} staying ${formatStartDate(b.start_date)} to ${formatEndDate(b.end_date)}`;
+
+    let body = '';
+    if (upcoming.length === 0) {
+      body = 'No upcoming guests scheduled.';
+    } else if (upcoming.length === 1) {
+      body = `Next guest at 1935 E. Andreas is ${formatGuestInfo(upcoming[0])}.`;
+    } else {
+      body = `Next guest at 1935 E. Andreas is ${formatGuestInfo(upcoming[0])}, followed by ${formatGuestInfo(upcoming[1])}.`;
+    }
+    body += ' Latest info at https://stayzzz.vercel.app';
+
+    const recipients = '4157864282,4422184858,7609698962';
+    const smsUrl = `sms:/open?addresses=${recipients}&body=${encodeURIComponent(body)}`;
+    window.location.href = smsUrl;
+  };
+
   return (
     <div className="min-h-screen bg-[#eeeeee] pb-20">
       <Toaster />
@@ -288,6 +334,13 @@ export default function App() {
                     Calendar
                   </TabsTrigger>
                 </TabsList>
+                <button
+                  onClick={handleShare}
+                  className="h-[40px] w-[40px] rounded-full bg-white flex items-center justify-center shadow-sm shrink-0 hover:bg-gray-50 transition-colors"
+                  aria-label="Share upcoming guests"
+                >
+                  <Share className="w-5 h-5 text-gray-600" />
+                </button>
               </>
             )}
           </div>
@@ -325,23 +378,30 @@ export default function App() {
           )}
           {(() => {
             const currentYear = new Date().getFullYear();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             const qualifyingStays = bookings.filter(b => {
-              if (b.stay_type !== 'guest') return false;
-              if (new Date(b.start_date).getFullYear() !== currentYear) return false;
-              const nights = Math.ceil((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / (1000 * 60 * 60 * 24));
-              return nights < 28;
+              if (b.stay_type !== 'guest' || b.hidden) return false;
+              const end = new Date(b.end_date);
+              end.setHours(0, 0, 0, 0);
+              if (end < today) return false;
+              const start = new Date(b.start_date);
+              return start.getFullYear() === currentYear;
             });
             const totalNights = qualifyingStays.reduce((sum, b) => {
               return sum + Math.ceil((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / (1000 * 60 * 60 * 24));
             }, 0);
             return (
               <p className="text-center text-gray-400 text-[12px] mt-4 mb-2">
-                {currentYear} · {qualifyingStays.length} guest {qualifyingStays.length === 1 ? 'stay' : 'stays'} · {totalNights} {totalNights === 1 ? 'night' : 'nights'} booked
-              </p>
+                {qualifyingStays.length} guest {qualifyingStays.length === 1 ? 'stay' : 'stays'}, totalling {totalNights} {totalNights === 1 ? 'night' : 'nights'} remaining in {currentYear}              </p>
             );
           })()}
         </Tabs>
       </div>
+
+      {pendingAlerts.length > 0 && (
+        <AlertsModal alerts={pendingAlerts} onClose={() => setPendingAlerts([])} />
+      )}
 
       <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />
 

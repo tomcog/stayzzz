@@ -8,7 +8,8 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, X, Save, SaveOff } from 'lucide-react';
+import { Calendar as CalendarLucide } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Booking } from '../App';
@@ -72,7 +73,6 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
         service_time: formData.service_time || undefined,
         contact_phone: formData.contact_phone || undefined,
       });
-      toast.success('Booking added successfully!');
       resetForm();
       onOpenChange(false);
     } catch (err) {
@@ -83,25 +83,44 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
   const namePlaceholder = bookingType === 'guest' ? 'Guest name' : bookingType === 'owner' ? 'Owner name' : 'Provider name';
   const nameLabel = bookingType === 'guest' ? 'Guest Name *' : bookingType === 'owner' ? 'Owner Name *' : 'Provider Name';
 
+  const hasName = bookingType === 'service' ? !!formData.service_requested : !!formData.guest_name;
+  const hasDates = !!dateRange?.from && !!dateRange?.to;
+  const canSave = hasName && hasDates;
+  const hasAnyChanges = hasName || hasDates || JSON.stringify(formData) !== JSON.stringify(emptyForm);
+
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
       <SheetContent side="bottom" className="h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0" aria-describedby={undefined}>
         <SheetTitle className="sr-only">Add New Booking</SheetTitle>
 
-        {/* Header */}
-        <div className="px-4 py-6">
-          <h2 className="text-[18px] font-semibold uppercase tracking-wide m-0">Add New Booking</h2>
-        </div>
-
         <form onSubmit={handleSubmit}>
-          <div className="px-4 flex flex-col gap-4">
+          <div className="px-4 py-6 flex flex-col gap-4">
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => { resetForm(); onOpenChange(false); }} className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${hasAnyChanges ? 'bg-[#EE5A7B]/10 hover:bg-[#EE5A7B]/20' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                {hasAnyChanges
+                  ? <SaveOff className="w-4 h-4 text-[#EE5A7B]" />
+                  : <X className="w-4 h-4 text-gray-500" />
+                }
+              </button>
+              <h2 className="text-[18px] font-semibold uppercase tracking-wide m-0 flex-1">Add New Booking</h2>
+              {canSave && (
+                <button
+                  type="submit"
+                  className="shrink-0 w-8 h-8 rounded-full bg-cta/10 flex items-center justify-center hover:bg-cta/20 transition-colors"
+                >
+                  <Save className="w-4 h-4 text-cta" />
+                </button>
+              )}
+            </div>
 
             {/* Row 1: Type + Name */}
             <div className="flex gap-4 items-end">
               <div className="w-[130px] shrink-0">
                 <Label htmlFor="booking-type" className="text-[14px]">Type</Label>
                 <Select value={bookingType} onValueChange={(v) => { setBookingType(v as 'guest' | 'owner' | 'service'); setFormData(emptyForm); }}>
-                  <SelectTrigger id="booking-type" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="booking-type" variant="underline" className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="guest">Guest</SelectItem>
                     <SelectItem value="owner">Owner</SelectItem>
@@ -113,13 +132,13 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
                 <Label htmlFor="primaryName" className="text-[14px]">{nameLabel}</Label>
                 <Input
                   id="primaryName"
+                  variant="underline"
                   value={bookingType === 'service' ? formData.provider_name : formData.guest_name}
                   onChange={(e) => setFormData(bookingType === 'service'
                     ? { ...formData, provider_name: e.target.value }
                     : { ...formData, guest_name: e.target.value }
                   )}
-                  placeholder={namePlaceholder}
-                  className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]"
+                  className="mt-1"
                 />
               </div>
             </div>
@@ -132,7 +151,7 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal mt-1 h-9 text-[14px] border-[rgba(0,0,0,0.1)] rounded-[8px]", !dateRange && "text-muted-foreground")}
+                    className={cn("w-full justify-start text-left font-normal mt-1 h-9 text-[17px] bg-transparent border-0 border-b-2 border-gray-300 rounded-none shadow-none px-1 hover:bg-transparent", !dateRange && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                     {dateRange?.from ? (
@@ -155,12 +174,12 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
                     <Label htmlFor="phone" className="text-[14px]">Phone</Label>
-                    <Input id="phone" type="tel" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} placeholder="+1 (555) 123-4567" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    <Input id="phone" type="tel" variant="underline" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} className="mt-1" />
                   </div>
-                  <div className="w-[160px] shrink-0">
+                  <div className="flex-1">
                     <Label htmlFor="poolHeat" className="text-[14px]">Pool heat</Label>
                     <Select value={formData.pool_heat} onValueChange={(v) => setFormData({ ...formData, pool_heat: v as Booking['pool_heat'] })}>
-                      <SelectTrigger id="poolHeat" className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger id="poolHeat" variant="underline" className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {Object.values(POOL_HEAT_STATUSES).map((status) => (
                           <SelectItem key={status.code} value={status.code}>{status.name}</SelectItem>
@@ -173,7 +192,7 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
                 {/* Row 4: Booking info */}
                 <div>
                   <Label htmlFor="bookingUrl" className="text-[14px]">Booking info</Label>
-                  <Input id="bookingUrl" type="url" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} placeholder="Booking URL" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  <Input id="bookingUrl" type="url" variant="underline" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} className="mt-1" />
                 </div>
               </>
             )}
@@ -182,7 +201,7 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
             {bookingType === 'owner' && (
               <div>
                 <Label htmlFor="ownerBookingUrl" className="text-[14px]">Booking info</Label>
-                <Input id="ownerBookingUrl" type="url" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} placeholder="Booking URL" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                <Input id="ownerBookingUrl" type="url" variant="underline" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} className="mt-1" />
               </div>
             )}
 
@@ -191,26 +210,31 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
               <>
                 <div>
                   <Label htmlFor="serviceRequested" className="text-[14px]">Service requested *</Label>
-                  <Input id="serviceRequested" value={formData.service_requested} onChange={(e) => setFormData({ ...formData, service_requested: e.target.value })} placeholder="e.g., Pool cleaning, HVAC maintenance" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                  <Input id="serviceRequested" variant="underline" value={formData.service_requested} onChange={(e) => setFormData({ ...formData, service_requested: e.target.value })} placeholder="e.g., Pool cleaning, HVAC maintenance" className="mt-1" />
                 </div>
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
                     <Label htmlFor="providerContact" className="text-[14px]">Provider contact</Label>
-                    <Input id="providerContact" type="tel" value={formData.provider_contact} onChange={(e) => setFormData({ ...formData, provider_contact: e.target.value })} placeholder="Phone number" className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    <Input id="providerContact" type="tel" variant="underline" value={formData.provider_contact} onChange={(e) => setFormData({ ...formData, provider_contact: e.target.value })} placeholder="Phone number" className="mt-1" />
                   </div>
                   <div className="flex-1">
                     <Label htmlFor="providerUrl" className="text-[14px]">Website</Label>
-                    <Input id="providerUrl" type="url" value={formData.provider_url} onChange={(e) => setFormData({ ...formData, provider_url: e.target.value })} placeholder="https://..." className="mt-1 h-9 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    <Input id="providerUrl" type="url" variant="underline" value={formData.provider_url} onChange={(e) => setFormData({ ...formData, provider_url: e.target.value })} placeholder="https://..." className="mt-1" />
                   </div>
                 </div>
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
                     <Label htmlFor="serviceDate" className="text-[14px]">Service date</Label>
-                    <Input id="serviceDate" type="date" value={formData.service_date} onChange={(e) => setFormData({ ...formData, service_date: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    <div className="relative mt-1">
+                      <label htmlFor="serviceDate" className="absolute left-1 top-1/2 -translate-y-1/2 cursor-pointer">
+                        <CalendarLucide className="w-4 h-4 text-gray-400" />
+                      </label>
+                      <Input id="serviceDate" type="date" variant="underline" value={formData.service_date} onChange={(e) => setFormData({ ...formData, service_date: e.target.value })} className="pl-6" />
+                    </div>
                   </div>
                   <div className="flex-1">
                     <Label htmlFor="serviceTime" className="text-[14px]">Service time</Label>
-                    <Input id="serviceTime" type="time" value={formData.service_time} onChange={(e) => setFormData({ ...formData, service_time: e.target.value })} className="mt-1 h-9 text-[14px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+                    <Input id="serviceTime" type="time" variant="underline" value={formData.service_time} onChange={(e) => setFormData({ ...formData, service_time: e.target.value })} className="mt-1" />
                   </div>
                 </div>
               </>
@@ -219,15 +243,10 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
             {/* Notes — all types */}
             <div>
               <Label htmlFor="notes" className="text-[14px]">Notes</Label>
-              <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any special requests or notes..." rows={3} className="mt-1 text-[16px] bg-[#f3f3f5] border-0 rounded-[8px]" />
+              <Textarea id="notes" variant="underline" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} className="mt-1" />
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-2 px-4 py-6 mt-2">
-            <Button type="button" variant="outline" onClick={() => { resetForm(); onOpenChange(false); }} className="flex-1 h-9 rounded-[4px] border-[rgba(0,0,0,0.1)] text-[14px]">Cancel</Button>
-            <Button type="submit" className="flex-1 h-9 rounded-[4px] bg-cta hover:bg-cta/90 text-[14px]">Add Booking</Button>
-          </div>
         </form>
       </SheetContent>
     </Sheet>
