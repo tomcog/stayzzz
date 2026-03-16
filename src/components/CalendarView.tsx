@@ -18,7 +18,10 @@ export function CalendarView({ bookings, onBookingClick }: CalendarViewProps) {
 
   const getFirstName = (fullName: string) => fullName.trim().split(' ')[0];
   const daysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  const firstDayOfMonth = (date: Date) => {
+    const day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    return (day + 6) % 7; // shift so Monday = 0
+  };
 
   const isDateInRange = (day: number, booking: Booking) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -126,7 +129,7 @@ export function CalendarView({ bookings, onBookingClick }: CalendarViewProps) {
         </div>
 
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
             <div key={day} className="text-center text-gray-600 py-2">{day}</div>
           ))}
         </div>

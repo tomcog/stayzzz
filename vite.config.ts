@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5174,
+      port: 5171,
       strictPort: true,
       proxy: {
         '/api/ical': {
