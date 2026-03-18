@@ -25,7 +25,10 @@ export function AlertsModal({ alerts: initialAlerts, bookings, onClose }: Alerts
   const remaining = alerts.length - 1;
 
   const handleDismiss = () => {
-    dismissAlert(currentAlert.id);
+    dismissAlert(
+      currentAlert.id,
+      currentAlert.shareAction ? buildShareMessage(bookings) : undefined
+    );
     advance();
   };
 

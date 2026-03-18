@@ -1,9 +1,11 @@
 import type { Booking } from '../App';
+import { buildShareMessage } from '../utils/shareMessage';
 
 const CHECK_IN_HOUR = 14; // 2pm Pacific
 const ALERT_WINDOW_HOURS = 72;
 const DISMISSED_KEY = 'stayzzz_dismissed_alerts';
 const KNOWN_BOOKINGS_KEY = 'stayzzz_known_bookings';
+const LAST_SHARE_MESSAGE_KEY = 'stayzzz_last_share_message';
 
 interface KnownBooking {
   id: string;
@@ -39,10 +41,14 @@ function getDismissedAlerts(): Set<string> {
   }
 }
 
-export function dismissAlert(alertId: string) {
+export function dismissAlert(alertId: string, shareMessage?: string) {
   const dismissed = getDismissedAlerts();
   dismissed.add(alertId);
   localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed]));
+
+  if (alertId === 'share-crew' && shareMessage) {
+    localStorage.setItem(LAST_SHARE_MESSAGE_KEY, shareMessage);
+  }
 }
 
 export function getAppAlerts(bookings: Booking[]): AppAlert[] {
@@ -94,24 +100,6 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
       }
     }
 
-    // 1-week-before alert: share upcoming guests with the crew
-    {
-      const [year, month, day] = booking.start_date.split('-').map(Number);
-      const startDate = new Date(year, month - 1, day);
-      const diffDays = Math.ceil((startDate.getTime() - nowPacific.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays > 0 && diffDays <= 7) {
-        const id = `share-crew-${booking.id}`;
-        if (!dismissed.has(id)) {
-          alerts.push({
-            id,
-            message: 'Let the crew know about upcoming guests',
-            type: 'info',
-            shareAction: true,
-          });
-        }
-      }
-    }
-
     // Checkout alert: end_date is today
     if (booking.end_date === today) {
       const id = `checkout-${booking.id}-${today}`;
@@ -121,6 +109,31 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
           id,
           message: `${name} is checking out today.`,
           type: 'info',
+        });
+      }
+    }
+  }
+
+  // Share alert: only show when the message content has changed
+  {
+    const hasUpcomingWithin7Days = bookings.some(b => {
+      if (b.stay_type !== 'guest') return false;
+      const [year, month, day] = b.start_date.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day);
+      const diffDays = Math.ceil((startDate.getTime() - nowPacific.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays > 0 && diffDays <= 7;
+    });
+
+    if (hasUpcomingWithin7Days) {
+      const currentMessage = buildShareMessage(bookings);
+      const lastMessage = localStorage.getItem(LAST_SHARE_MESSAGE_KEY);
+
+      if (currentMessage !== lastMessage) {
+        alerts.push({
+          id: 'share-crew',
+          message: 'Let the crew know about upcoming guests',
+          type: 'info',
+          shareAction: true,
         });
       }
     }
