@@ -13,7 +13,7 @@ import { projectId, publicAnonKey } from './utils/supabase/info';
 import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from './utils/dateUtils';
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
-import { getAppAlerts, type AppAlert } from './lib/appAlerts';
+import { getAppAlerts, getDisappearedAlerts, type AppAlert } from './lib/appAlerts';
 import { buildShareMessage, SMS_RECIPIENTS } from './utils/shareMessage';
 import { AlertsModal } from './components/AlertsModal';
 
@@ -105,11 +105,17 @@ export default function App() {
     }
   };
 
+  const feedUidsRef = useRef<Set<string>>(new Set());
+
   const syncAndFetch = async () => {
-    await Promise.allSettled([
-      syncAirbnbCalendar().catch(e => console.error('Airbnb sync failed:', e)),
-      syncVrboCalendar().catch(e => console.error('VRBO sync failed:', e)),
+    const [airbnbResult, vrboResult] = await Promise.allSettled([
+      syncAirbnbCalendar().catch(e => { console.error('Airbnb sync failed:', e); return { inserted: 0, errors: [], feedUids: [] as string[] }; }),
+      syncVrboCalendar().catch(e => { console.error('VRBO sync failed:', e); return { inserted: 0, errors: [], feedUids: [] as string[] }; }),
     ]);
+    const allFeedUids = new Set<string>();
+    if (airbnbResult.status === 'fulfilled') airbnbResult.value.feedUids.forEach(uid => allFeedUids.add(uid));
+    if (vrboResult.status === 'fulfilled') vrboResult.value.feedUids.forEach(uid => allFeedUids.add(uid));
+    feedUidsRef.current = allFeedUids;
     await fetchBookings();
   };
 
@@ -119,6 +125,9 @@ export default function App() {
     if (!isLoading && bookings.length > 0 && !hasCheckedAlerts.current) {
       hasCheckedAlerts.current = true;
       const alerts = getAppAlerts(bookings);
+      if (feedUidsRef.current.size > 0) {
+        alerts.unshift(...getDisappearedAlerts(bookings, feedUidsRef.current));
+      }
       if (alerts.length > 0) setPendingAlerts(alerts);
     }
   }, [isLoading, bookings]);
@@ -374,7 +383,15 @@ export default function App() {
       </div>
 
       {pendingAlerts.length > 0 && (
-        <AlertsModal alerts={pendingAlerts} bookings={bookings} onClose={() => setPendingAlerts([])} />
+        <AlertsModal
+          alerts={pendingAlerts}
+          bookings={bookings}
+          onClose={() => setPendingAlerts([])}
+          onHideBooking={(bookingId) => {
+            const booking = bookings.find(b => b.id === bookingId);
+            if (booking) handleUpdateBooking({ ...booking, hidden: true });
+          }}
+        />
       )}
 
       <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />

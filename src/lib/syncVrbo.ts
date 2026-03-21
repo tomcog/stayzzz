@@ -13,6 +13,7 @@ interface RentalEvent {
 export async function syncVrboCalendar(): Promise<{
   inserted: number;
   errors: string[];
+  feedUids: string[];
 }> {
   const response = await fetch('/api/vrbo-ical');
 
@@ -56,7 +57,7 @@ export async function syncVrboCalendar(): Promise<{
     .filter((e): e is RentalEvent => e !== null);
 
   if (events.length === 0) {
-    return { inserted: 0, errors: [] };
+    return { inserted: 0, errors: [], feedUids: [] };
   }
 
   // Detect new vs existing to preserve manually-set stay_type
@@ -94,5 +95,5 @@ export async function syncVrboCalendar(): Promise<{
     if (error) console.error(`Failed to update VRBO ${event.airbnb_uid}:`, error.message);
   }
 
-  return { inserted: newEvents.length, errors: [] };
+  return { inserted: newEvents.length, errors: [], feedUids: incomingUids };
 }

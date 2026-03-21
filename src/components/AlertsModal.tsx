@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Info, Share } from 'lucide-react';
+import { AlertTriangle, Info, Share, EyeOff } from 'lucide-react';
 import { type AppAlert, dismissAlert } from '../lib/appAlerts';
 import { buildShareMessage, SMS_RECIPIENTS } from '../utils/shareMessage';
 import type { Booking } from '../App';
@@ -8,9 +8,10 @@ interface AlertsModalProps {
   alerts: AppAlert[];
   bookings: Booking[];
   onClose: () => void;
+  onHideBooking?: (bookingId: string) => void;
 }
 
-export function AlertsModal({ alerts: initialAlerts, bookings, onClose }: AlertsModalProps) {
+export function AlertsModal({ alerts: initialAlerts, bookings, onClose, onHideBooking }: AlertsModalProps) {
   const [alerts, setAlerts] = useState(initialAlerts);
 
   const handleShareTap = () => {
@@ -81,12 +82,23 @@ export function AlertsModal({ alerts: initialAlerts, bookings, onClose }: Alerts
             </button>
           </div>
         )}
+        {currentAlert.hideBookingId && onHideBooking && (
+          <div className="border-t border-gray-100">
+            <button
+              onClick={() => { onHideBooking(currentAlert.hideBookingId!); handleDismiss(); }}
+              className="w-full px-6 py-3.5 text-[15px] font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <EyeOff className="w-4 h-4" />
+              Hide booking
+            </button>
+          </div>
+        )}
         <div className="border-t border-gray-100">
           <button
             onClick={handleDismiss}
             className="w-full px-6 py-3.5 text-[15px] font-medium text-gray-900 hover:bg-gray-50 transition-colors"
           >
-            Got it
+            {currentAlert.hideBookingId ? 'Keep it' : 'Got it'}
           </button>
         </div>
         <div className="border-t border-gray-100">

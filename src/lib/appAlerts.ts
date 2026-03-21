@@ -19,6 +19,7 @@ export interface AppAlert {
   message: string;
   type: 'warning' | 'info';
   shareAction?: boolean;
+  hideBookingId?: string;
 }
 
 function getNowPacific() {
@@ -49,6 +50,34 @@ export function dismissAlert(alertId: string, shareMessage?: string) {
   if (alertId === 'share-crew' && shareMessage) {
     localStorage.setItem(LAST_SHARE_MESSAGE_KEY, shareMessage);
   }
+}
+
+export function getDisappearedAlerts(bookings: Booking[], feedUids: Set<string>): AppAlert[] {
+  const dismissed = getDismissedAlerts();
+  const alerts: AppAlert[] = [];
+  const today = getTodayPacific();
+
+  for (const booking of bookings) {
+    // Only check synced (non-manual) bookings that aren't already hidden
+    if (!booking.airbnb_uid || booking.airbnb_uid.startsWith('manual_') || booking.hidden) continue;
+    // Only flag future/current bookings
+    if (booking.end_date < today) continue;
+    // If this UID is still in one of the feeds, it's fine
+    if (feedUids.has(booking.airbnb_uid)) continue;
+
+    const id = `disappeared-${booking.id}`;
+    if (dismissed.has(id)) continue;
+
+    const name = booking.guest_name || 'Unknown guest';
+    alerts.push({
+      id,
+      message: `${name}'s stay (${booking.start_date} – ${booking.end_date}) has disappeared from the booking feed. It may have been cancelled.`,
+      type: 'warning',
+      hideBookingId: booking.id,
+    });
+  }
+
+  return alerts;
 }
 
 export function getAppAlerts(bookings: Booking[]): AppAlert[] {
@@ -96,6 +125,18 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
           id,
           message: `${name} arrives tomorrow for ${nights} ${nights === 1 ? 'night' : 'nights'}.`,
           type: 'info',
+        });
+      }
+    }
+
+    // Unidentified guest alert: no guest name on a guest stay
+    if (!booking.guest_name?.trim() && booking.end_date >= today) {
+      const id = `unidentified-${booking.id}`;
+      if (!dismissed.has(id)) {
+        alerts.push({
+          id,
+          message: `There is an unidentified guest stay from ${booking.start_date} to ${booking.end_date}.`,
+          type: 'warning',
         });
       }
     }

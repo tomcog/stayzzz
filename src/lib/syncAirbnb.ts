@@ -16,6 +16,7 @@ interface RentalEvent {
 export async function syncAirbnbCalendar(): Promise<{
   inserted: number;
   errors: string[];
+  feedUids: string[];
 }> {
   // 1. Fetch the iCal feed via serverless proxy
   const response = await fetch('/api/ical');
@@ -106,5 +107,6 @@ export async function syncAirbnbCalendar(): Promise<{
   return {
     inserted: newEvents.length,
     errors: [],
+    feedUids: incomingUids,
   };
 }
