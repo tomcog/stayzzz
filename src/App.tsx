@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Home, Calendar, RefreshCw, Search, XCircle, Share } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { BookingList } from './components/BookingList';
 import { CalendarView } from './components/CalendarView';
-import { AddBookingDialog } from './components/AddBookingDialog';
-import { BookingDetailsSheet } from './components/BookingDetailsSheet';
 import { ButtonFab } from './components/button-fab';
 import { ButtonPrimary } from './components/button-primary';
 import { Toaster } from './components/ui/sonner';
@@ -15,7 +13,16 @@ import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
 import { getAppAlerts, getDisappearedAlerts, type AppAlert } from './lib/appAlerts';
 import { buildShareMessage, SMS_RECIPIENTS } from './utils/shareMessage';
-import { AlertsModal } from './components/AlertsModal';
+
+const AddBookingDialog = lazy(() =>
+  import('./components/AddBookingDialog').then(m => ({ default: m.AddBookingDialog }))
+);
+const BookingDetailsSheet = lazy(() =>
+  import('./components/BookingDetailsSheet').then(m => ({ default: m.BookingDetailsSheet }))
+);
+const AlertsModal = lazy(() =>
+  import('./components/AlertsModal').then(m => ({ default: m.AlertsModal }))
+);
 
 export interface Booking {
   id: string;
@@ -382,29 +389,33 @@ export default function App() {
         </Tabs>
       </div>
 
-      {pendingAlerts.length > 0 && (
-        <AlertsModal
-          alerts={pendingAlerts}
-          bookings={bookings}
-          onClose={() => setPendingAlerts([])}
-          onHideBooking={(bookingId) => {
-            const booking = bookings.find(b => b.id === bookingId);
-            if (booking) handleUpdateBooking({ ...booking, hidden: true });
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {pendingAlerts.length > 0 && (
+          <AlertsModal
+            alerts={pendingAlerts}
+            bookings={bookings}
+            onClose={() => setPendingAlerts([])}
+            onHideBooking={(bookingId) => {
+              const booking = bookings.find(b => b.id === bookingId);
+              if (booking) handleUpdateBooking({ ...booking, hidden: true });
+            }}
+          />
+        )}
 
-      <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />
+        {isAddDialogOpen && (
+          <AddBookingDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddBooking={handleAddBooking} />
+        )}
 
-      {selectedBooking && (
-        <BookingDetailsSheet
-          open={isDetailsSheetOpen}
-          onOpenChange={setIsDetailsSheetOpen}
-          booking={selectedBooking}
-          onUpdateBooking={handleUpdateBooking}
-          onDeleteBooking={handleDeleteBooking}
-        />
-      )}
+        {selectedBooking && (
+          <BookingDetailsSheet
+            open={isDetailsSheetOpen}
+            onOpenChange={setIsDetailsSheetOpen}
+            booking={selectedBooking}
+            onUpdateBooking={handleUpdateBooking}
+            onDeleteBooking={handleDeleteBooking}
+          />
+        )}
+      </Suspense>
 
       <ButtonFab onClick={handleRefresh} disabled={isRefreshing} icon={RefreshCw} isAnimating={isRefreshing} label="refresh_booking" />
     </div>

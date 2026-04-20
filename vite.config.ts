@@ -3,11 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import fs from 'fs'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const icalUrl = env.VITE_AIRBNB_ICAL_URL
   const vrboIcalUrl = env.VITE_VRBO_ICAL_URL
+  const ports = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ports.json'), 'utf-8'))
 
   return {
     plugins: [
@@ -45,8 +47,31 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'radix': [
+              '@radix-ui/react-accordion',
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-label',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-radio-group',
+              '@radix-ui/react-select',
+              '@radix-ui/react-separator',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-tabs',
+            ],
+            'ical': ['ical.js'],
+          },
+        },
+      },
+    },
     server: {
-      port: 5171,
+      port: ports['Stayzzz'],
       strictPort: true,
       proxy: {
         '/api/ical': {
