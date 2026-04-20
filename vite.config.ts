@@ -9,7 +9,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const icalUrl = env.VITE_AIRBNB_ICAL_URL
   const vrboIcalUrl = env.VITE_VRBO_ICAL_URL
-  const ports = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ports.json'), 'utf-8'))
+  const portsPath = path.resolve(__dirname, '../ports.json')
+  const ports = fs.existsSync(portsPath)
+    ? JSON.parse(fs.readFileSync(portsPath, 'utf-8'))
+    : {}
 
   return {
     plugins: [
