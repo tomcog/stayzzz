@@ -109,6 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'public, max-age=300');
     return res.status(200).send(ical);
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to generate calendar feed' });
+    const message = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
+    console.error('feed error:', message);
+    return res.status(500).json({ error: 'Failed to generate calendar feed', detail: message });
   }
 }
