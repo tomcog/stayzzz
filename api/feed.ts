@@ -38,14 +38,15 @@ function formatDateValue(dateStr: string): string {
 }
 
 function buildVEvent(booking: Booking): string {
+  const name = booking.guest_name ?? 'Unknown';
   const summary =
     booking.stay_type === 'guest'
-      ? `Guest: ${booking.guest_name}`
+      ? `Guest: ${name}`
       : booking.stay_type === 'owner'
-        ? `Owner: ${booking.guest_name}`
+        ? `Owner: ${name}`
         : booking.stay_type === 'service'
-          ? `Service: ${booking.guest_name}`
-          : booking.guest_name;
+          ? `Service: ${name}`
+          : name;
 
   const lines: string[] = [
     'BEGIN:VEVENT',
@@ -109,8 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'public, max-age=300');
     return res.status(200).send(ical);
   } catch (error) {
-    const message = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
-    console.error('feed error:', message);
-    return res.status(500).json({ error: 'Failed to generate calendar feed', detail: message });
+    console.error('feed error:', error);
+    return res.status(500).json({ error: 'Failed to generate calendar feed' });
   }
 }
