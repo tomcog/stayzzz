@@ -15,6 +15,23 @@ function escapeIcal(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
+// RFC 5545 §3.1: fold content lines at 75 octets. Apple Calendar enforces this strictly.
+function foldLine(line: string): string {
+  const bytes = Buffer.from(line, 'utf8');
+  if (bytes.length <= 75) return line;
+  const chunks: string[] = [];
+  let offset = 0;
+  while (offset < bytes.length) {
+    const limit = chunks.length === 0 ? 75 : 74; // continuation lines reserve 1 octet for leading space
+    let end = Math.min(offset + limit, bytes.length);
+    // Don't split mid multi-byte UTF-8 sequence.
+    while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--;
+    chunks.push(bytes.slice(offset, end).toString('utf8'));
+    offset = end;
+  }
+  return chunks.join('\r\n ');
+}
+
 function formatDateValue(dateStr: string): string {
   // Dates are YYYY-MM-DD, output as VALUE=DATE (all-day events)
   return dateStr.replace(/-/g, '');
@@ -78,12 +95,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'VERSION:2.0',
       'PRODID:-//Stayzzz//Booking Feed//EN',
       'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
       'X-WR-CALNAME:Stayzzz Bookings',
       'X-WR-TIMEZONE:America/Los_Angeles',
       vevents,
       'END:VCALENDAR',
-    ].join('\r\n');
+    ]
+      .join('\r\n')
+      .split('\r\n')
+      .map(foldLine)
+      .join('\r\n');
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');
