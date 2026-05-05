@@ -3,6 +3,14 @@ export const parseLocalDate = (dateString: string): Date => {
   return new Date(year, month - 1, day);
 };
 
+export const formatLongDate = (dateString: string): string => {
+  return parseLocalDate(dateString).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
 export const getCurrentDatePacific = (): Date => {
   const now = new Date();
   const pacificDateString = now.toLocaleDateString('en-US', {

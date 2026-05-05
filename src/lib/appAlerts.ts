@@ -1,8 +1,7 @@
 import type { Booking } from '../App';
 import { buildShareMessage } from '../utils/shareMessage';
+import { formatLongDate } from '../utils/dateUtils';
 
-const CHECK_IN_HOUR = 14; // 2pm Pacific
-const ALERT_WINDOW_HOURS = 72;
 const DISMISSED_KEY = 'stayzzz_dismissed_alerts';
 const KNOWN_BOOKINGS_KEY = 'stayzzz_known_bookings';
 const LAST_SHARE_MESSAGE_KEY = 'stayzzz_last_share_message';
@@ -71,7 +70,7 @@ export function getDisappearedAlerts(bookings: Booking[], feedUids: Set<string>)
     const name = booking.guest_name || 'Unknown guest';
     alerts.push({
       id,
-      message: `${name}'s stay (${booking.start_date} – ${booking.end_date}) has disappeared from the booking feed. It may have been cancelled.`,
+      message: `${name}'s stay (${formatLongDate(booking.start_date)} – ${formatLongDate(booking.end_date)}) has disappeared from the booking feed. It may have been cancelled.`,
       type: 'warning',
       hideBookingId: booking.id,
     });
@@ -92,26 +91,6 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
 
   for (const booking of bookings) {
     if (booking.stay_type !== 'guest') continue;
-
-    // Pool heat alert: within 72h of check-in, pool heat unresolved
-    if (booking.pool_heat === 'not-asked' || booking.pool_heat === 'undecided') {
-      const [year, month, day] = booking.start_date.split('-').map(Number);
-      const checkInTime = new Date(year, month - 1, day, CHECK_IN_HOUR, 0, 0);
-      const hoursUntilCheckIn =
-        (checkInTime.getTime() - nowPacific.getTime()) / (1000 * 60 * 60);
-
-      if (hoursUntilCheckIn > 0 && hoursUntilCheckIn <= ALERT_WINDOW_HOURS) {
-        const id = `pool-heat-${booking.id}`;
-        if (!dismissed.has(id)) {
-          const name = booking.guest_name || 'A guest';
-          alerts.push({
-            id,
-            message: `${name} is arriving soon and has not added or declined pool heat.`,
-            type: 'warning',
-          });
-        }
-      }
-    }
 
     // Arriving tomorrow alert
     if (booking.start_date === tomorrowPacific) {
@@ -135,7 +114,7 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
       if (!dismissed.has(id)) {
         alerts.push({
           id,
-          message: `There is an unidentified guest stay from ${booking.start_date} to ${booking.end_date}.`,
+          message: `There is an unidentified guest stay from ${formatLongDate(booking.start_date)} to ${formatLongDate(booking.end_date)}.`,
           type: 'warning',
         });
       }
@@ -205,7 +184,7 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
           );
           alerts.push({
             id,
-            message: `New reservation: ${name}, ${nights} ${nights === 1 ? 'night' : 'nights'} starting ${booking.start_date}.`,
+            message: `New reservation: ${name}, ${nights} ${nights === 1 ? 'night' : 'nights'} starting ${formatLongDate(booking.start_date)}.`,
             type: 'info',
           });
         }
@@ -219,7 +198,7 @@ export function getAppAlerts(bookings: Booking[]): AppAlert[] {
         if (!dismissed.has(id)) {
           alerts.push({
             id,
-            message: `Cancelled: ${known.guest_name}'s reservation (${known.start_date} – ${known.end_date}) is no longer on the calendar.`,
+            message: `Cancelled: ${known.guest_name}'s reservation (${formatLongDate(known.start_date)} – ${formatLongDate(known.end_date)}) is no longer on the calendar.`,
             type: 'warning',
           });
         }
