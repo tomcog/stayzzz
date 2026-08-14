@@ -10,7 +10,6 @@ export interface BookingStatus {
 export interface PoolHeatStatus {
   code: string;
   name: string;
-  displayText: string;
   color: string;
 }
 
@@ -45,11 +44,11 @@ export const BOOKING_STATUSES: Record<string, BookingStatus> = {
 };
 
 export const POOL_HEAT_STATUSES: Record<string, PoolHeatStatus> = {
-  'not-asked': { code: 'not-asked', name: 'Not asked', displayText: 'Ask at check-in', color: '#6B7280' },
-  'undecided': { code: 'undecided', name: 'Asked', displayText: 'Asked', color: '#000000' },
-  'declined': { code: 'declined', name: 'Declined', displayText: 'Declined', color: '#C41E3A' },
-  'requested': { code: 'requested', name: 'Requested', displayText: 'Requested', color: '#E69714' },
-  'paid': { code: 'paid', name: 'Paid', displayText: 'Paid', color: '#2D9D78' },
+  'not-asked': { code: 'not-asked', name: 'Not asked', color: '#6B7280' },
+  'undecided': { code: 'undecided', name: 'Asked', color: '#000000' },
+  'declined': { code: 'declined', name: 'Declined', color: '#C41E3A' },
+  'requested': { code: 'requested', name: 'Requested', color: '#E69714' },
+  'paid': { code: 'paid', name: 'Paid', color: '#2D9D78' },
 };
 
 export const getPoolHeatStatus = (code: string): PoolHeatStatus => {

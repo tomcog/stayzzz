@@ -25,6 +25,8 @@ interface AddBookingDialogProps {
 const emptyForm = {
   guest_name: '',
   phone_number: '',
+  email: '',
+  total_rent: '',
   booking_url: '',
   notes: '',
   pool_heat: 'not-asked' as Booking['pool_heat'],
@@ -62,6 +64,8 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
         start_date: format(dateRange!.from!, 'yyyy-MM-dd'),
         end_date: format(dateRange!.to!, 'yyyy-MM-dd'),
         phone_number: formData.phone_number,
+        email: formData.email || undefined,
+        total_rent: formData.total_rent ? parseFloat(formData.total_rent) : undefined,
         booking_url: formData.booking_url,
         notes: formData.notes,
         pool_heat: formData.pool_heat,
@@ -189,10 +193,22 @@ export function AddBookingDialog({ open, onOpenChange, onAddBooking }: AddBookin
                   </div>
                 </div>
 
-                {/* Row 4: Booking info */}
+                {/* Row 4: Email */}
                 <div>
-                  <Label htmlFor="bookingUrl" className="text-[14px]">Booking info</Label>
-                  <Input id="bookingUrl" type="url" variant="underline" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} className="mt-1" />
+                  <Label htmlFor="email" className="text-[14px]">Email</Label>
+                  <Input id="email" type="email" autoComplete="off" variant="underline" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="mt-1" />
+                </div>
+
+                {/* Row 5: Total rent + Booking info */}
+                <div className="flex gap-4 items-end">
+                  <div className="w-[130px] shrink-0">
+                    <Label htmlFor="totalRent" className="text-[14px]">Total rent</Label>
+                    <Input id="totalRent" type="number" inputMode="decimal" step="0.01" min="0" variant="underline" value={formData.total_rent} onChange={(e) => setFormData({ ...formData, total_rent: e.target.value })} placeholder="0.00" className="mt-1" />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="bookingUrl" className="text-[14px]">Booking info</Label>
+                    <Input id="bookingUrl" type="url" variant="underline" value={formData.booking_url} onChange={(e) => setFormData({ ...formData, booking_url: e.target.value })} className="mt-1" />
+                  </div>
                 </div>
               </>
             )}

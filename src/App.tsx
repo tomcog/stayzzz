@@ -32,6 +32,7 @@ export interface Booking {
   end_date: string;
   status: 'upcoming' | 'current' | 'completed';
   phone_number: string;
+  email?: string;
   booking_url: string;
   notes?: string;
   pool_heat?: 'not-asked' | 'undecided' | 'declined' | 'requested' | 'paid';

@@ -178,7 +178,7 @@ export function CardBooking({ booking, onClick, allBookings, onUpdateBooking, is
               <span className="card-small cursor-pointer hover:opacity-70 transition-opacity text-[16px]"
                 style={{ color: getPoolHeatStatus(booking.pool_heat).color }}
                 onClick={handlePoolHeatClick}>
-                {getPoolHeatStatus(booking.pool_heat).displayText}
+                {getPoolHeatStatus(booking.pool_heat).name}
               </span>
             </div>
           )}

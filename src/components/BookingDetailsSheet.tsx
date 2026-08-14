@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Calendar, Phone, Edit2, Trash2, Save, SaveOff, X, Link, Wrench, Globe, EyeOff, ArrowLeft } from 'lucide-react';
+import { Calendar, Phone, Mail, Edit2, Trash2, Save, SaveOff, X, Link, Wrench, Globe, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Booking } from '../App';
 import { parseLocalDate } from '../utils/dateUtils';
@@ -120,6 +120,19 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
                       <p className="text-[16px] text-[#4a5565] leading-6">Phone</p>
                       <a href={`tel:${booking.phone_number}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
                         {formatPhoneNumber(booking.phone_number)}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email */}
+                {booking.email && (
+                  <div className="flex gap-3 items-start">
+                    <Mail className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[16px] text-[#4a5565] leading-6">Email</p>
+                      <a href={`mailto:${booking.email}`} className="text-[16px] leading-6 hover:underline break-all" style={{ color: '#118AB2' }}>
+                        {booking.email}
                       </a>
                     </div>
                   </div>
@@ -329,6 +342,10 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-email" className="text-[14px]">Email</Label>
+                    <Input id="edit-email" type="email" autoComplete="off" variant="underline" changed={fieldChanged('email')} value={editedBooking.email || ''} onChange={(e) => setEditedBooking({ ...editedBooking, email: e.target.value })} className="mt-1" />
                   </div>
                   <div>
                     <Label htmlFor="edit-bookingUrl" className="text-[14px]">Booking info</Label>
