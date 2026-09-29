@@ -11,7 +11,7 @@ import { projectId, publicAnonKey } from './utils/supabase/info';
 import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from './utils/dateUtils';
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
-import { getAppAlerts, getDisappearedAlerts, type AppAlert } from './lib/appAlerts';
+import { getAppAlerts, getDisappearedAlerts, type AppAlert, type LoadedFeeds } from './lib/appAlerts';
 import { buildShareMessage, SMS_RECIPIENTS } from './utils/shareMessage';
 
 const AddBookingDialog = lazy(() =>
@@ -113,17 +113,19 @@ export default function App() {
     }
   };
 
-  const feedUidsRef = useRef<Set<string>>(new Set());
+  const feedUidsRef = useRef<LoadedFeeds>({ airbnb: new Set(), vrbo: new Set() });
 
   const syncAndFetch = async () => {
     const [airbnbResult, vrboResult] = await Promise.allSettled([
       syncAirbnbCalendar().catch(e => { console.error('Airbnb sync failed:', e); return { inserted: 0, errors: [], feedUids: [] as string[] }; }),
       syncVrboCalendar().catch(e => { console.error('VRBO sync failed:', e); return { inserted: 0, errors: [], feedUids: [] as string[] }; }),
     ]);
-    const allFeedUids = new Set<string>();
-    if (airbnbResult.status === 'fulfilled') airbnbResult.value.feedUids.forEach(uid => allFeedUids.add(uid));
-    if (vrboResult.status === 'fulfilled') vrboResult.value.feedUids.forEach(uid => allFeedUids.add(uid));
-    feedUidsRef.current = allFeedUids;
+    // A failed or empty feed must not count as "every booking disappeared" —
+    // only feeds that actually returned events are used for the check.
+    const loadedFeeds: LoadedFeeds = { airbnb: new Set(), vrbo: new Set() };
+    if (airbnbResult.status === 'fulfilled') airbnbResult.value.feedUids.forEach(uid => loadedFeeds.airbnb.add(uid));
+    if (vrboResult.status === 'fulfilled') vrboResult.value.feedUids.forEach(uid => loadedFeeds.vrbo.add(uid));
+    feedUidsRef.current = loadedFeeds;
     await fetchBookings();
   };
 
@@ -133,9 +135,7 @@ export default function App() {
     if (!isLoading && bookings.length > 0 && !hasCheckedAlerts.current) {
       hasCheckedAlerts.current = true;
       const alerts = getAppAlerts(bookings);
-      if (feedUidsRef.current.size > 0) {
-        alerts.unshift(...getDisappearedAlerts(bookings, feedUidsRef.current));
-      }
+      alerts.unshift(...getDisappearedAlerts(bookings, feedUidsRef.current));
       if (alerts.length > 0) setPendingAlerts(alerts);
     }
   }, [isLoading, bookings]);

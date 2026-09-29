@@ -51,7 +51,13 @@ export function dismissAlert(alertId: string, shareMessage?: string) {
   }
 }
 
-export function getDisappearedAlerts(bookings: Booking[], feedUids: Set<string>): AppAlert[] {
+/** UIDs returned by each feed on the latest sync; an empty set means that feed failed or returned nothing. */
+export interface LoadedFeeds {
+  airbnb: Set<string>;
+  vrbo: Set<string>;
+}
+
+export function getDisappearedAlerts(bookings: Booking[], feeds: LoadedFeeds): AppAlert[] {
   const dismissed = getDismissedAlerts();
   const alerts: AppAlert[] = [];
   const today = getTodayPacific();
@@ -61,7 +67,11 @@ export function getDisappearedAlerts(bookings: Booking[], feedUids: Set<string>)
     if (!booking.airbnb_uid || booking.airbnb_uid.startsWith('manual_') || booking.hidden) continue;
     // Only flag future/current bookings
     if (booking.end_date < today) continue;
-    // If this UID is still in one of the feeds, it's fine
+    // Compare only against the feed this booking came from, and only if that feed loaded.
+    // Airbnb UIDs end in @airbnb.com; VRBO UIDs are bare UUIDs.
+    const feedUids = booking.airbnb_uid.endsWith('@airbnb.com') ? feeds.airbnb : feeds.vrbo;
+    if (feedUids.size === 0) continue;
+    // If this UID is still in its feed, it's fine
     if (feedUids.has(booking.airbnb_uid)) continue;
 
     const id = `disappeared-${booking.id}`;
