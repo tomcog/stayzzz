@@ -1,7 +1,24 @@
 import type { Booking } from '../App';
+import { toast } from 'sonner';
 import { parseLocalDate } from './dateUtils';
 
 export const SMS_RECIPIENTS = '4157864282,4422184858,7609698962';
+
+// sms: links only open Messages on a phone; desktop browsers silently ignore them,
+// so fall back to copying the message there.
+export async function sendShareMessage(bookings: Booking[]) {
+  const body = buildShareMessage(bookings);
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    window.location.href = `sms:/open?addresses=${SMS_RECIPIENTS}&body=${encodeURIComponent(body)}`;
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(body);
+    toast.success('Message copied — texting only works from your phone');
+  } catch {
+    toast.error('Texting only works from your phone');
+  }
+}
 
 function formatStartDate(dateStr: string) {
   const d = parseLocalDate(dateStr);

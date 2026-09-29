@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Info, Share, EyeOff } from 'lucide-react';
 import { type AppAlert, dismissAlert } from '../lib/appAlerts';
-import { buildShareMessage, SMS_RECIPIENTS } from '../utils/shareMessage';
+import { buildShareMessage, sendShareMessage } from '../utils/shareMessage';
 import type { Booking } from '../App';
 
 interface AlertsModalProps {
@@ -14,11 +14,7 @@ interface AlertsModalProps {
 export function AlertsModal({ alerts: initialAlerts, bookings, onClose, onHideBooking }: AlertsModalProps) {
   const [alerts, setAlerts] = useState(initialAlerts);
 
-  const handleShareTap = () => {
-    const body = buildShareMessage(bookings);
-    const smsUrl = `sms:/open?addresses=${SMS_RECIPIENTS}&body=${encodeURIComponent(body)}`;
-    window.location.href = smsUrl;
-  };
+  const handleShareTap = () => sendShareMessage(bookings);
 
   if (alerts.length === 0) return null;
 

@@ -12,7 +12,7 @@ import { calculateBookingStatus, getCurrentDatePacific, parseLocalDate } from '.
 import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
 import { getAppAlerts, getDisappearedAlerts, type AppAlert, type LoadedFeeds } from './lib/appAlerts';
-import { buildShareMessage, SMS_RECIPIENTS } from './utils/shareMessage';
+import { sendShareMessage } from './utils/shareMessage';
 
 const AddBookingDialog = lazy(() =>
   import('./components/AddBookingDialog').then(m => ({ default: m.AddBookingDialog }))
@@ -252,11 +252,7 @@ export default function App() {
     setIsDetailsSheetOpen(true);
   };
 
-  const handleShare = () => {
-    const body = buildShareMessage(bookings);
-    const smsUrl = `sms:/open?addresses=${SMS_RECIPIENTS}&body=${encodeURIComponent(body)}`;
-    window.location.href = smsUrl;
-  };
+  const handleShare = () => sendShareMessage(bookings);
 
   return (
     <div className="min-h-screen bg-[#eeeeee] pb-20">
