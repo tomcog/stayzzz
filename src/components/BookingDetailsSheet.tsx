@@ -4,10 +4,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+import { Calendar as DatePicker } from './ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { Calendar, Phone, Mail, Edit2, Trash2, Save, SaveOff, X, Link, Wrench, Globe, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { Booking } from '../App';
 import { parseLocalDate } from '../utils/dateUtils';
 import { formatPhoneNumber } from '../utils/formatters';
@@ -34,6 +38,23 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
 
   const formatDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  const selectedRange: DateRange | undefined = editedBooking.start_date
+    ? { from: parseLocalDate(editedBooking.start_date), to: editedBooking.end_date ? parseLocalDate(editedBooking.end_date) : undefined }
+    : undefined;
+
+  const handleRangeSelect = (range: DateRange | undefined) =>
+    setEditedBooking({
+      ...editedBooking,
+      start_date: range?.from ? format(range.from, 'yyyy-MM-dd') : '',
+      end_date: range?.to ? format(range.to, 'yyyy-MM-dd') : '',
+    });
+
+  const stayDatePicker = (
+    <PopoverContent className="w-auto p-0" align="start">
+      <DatePicker initialFocus mode="range" defaultMonth={selectedRange?.from} selected={selectedRange} onSelect={handleRangeSelect} />
+    </PopoverContent>
+  );
 
   const handleSave = async () => {
     if (editedBooking.stay_type === 'unresolved') { toast.error('Please select a stay type first'); return; }
@@ -306,18 +327,28 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
                 <div className="flex-1">
                   <Label htmlFor="edit-startDate" className="text-[14px]">Check-in *</Label>
                   <div className="relative mt-1">
-                    <label htmlFor="edit-startDate" className="absolute left-1 top-1/2 -translate-y-1/2 cursor-pointer">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" aria-label="Pick stay dates" className="absolute left-1 top-1/2 -translate-y-1/2 cursor-pointer z-10">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </PopoverTrigger>
+                      {stayDatePicker}
+                    </Popover>
                     <Input id="edit-startDate" type="date" variant="underline" changed={fieldChanged('start_date')} value={editedBooking.start_date} onChange={(e) => setEditedBooking({ ...editedBooking, start_date: e.target.value })} className="pl-6" />
                   </div>
                 </div>
                 <div className="flex-1">
                   <Label htmlFor="edit-endDate" className="text-[14px]">Check-out *</Label>
                   <div className="relative mt-1">
-                    <label htmlFor="edit-endDate" className="absolute left-1 top-1/2 -translate-y-1/2 cursor-pointer">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" aria-label="Pick stay dates" className="absolute left-1 top-1/2 -translate-y-1/2 cursor-pointer z-10">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </PopoverTrigger>
+                      {stayDatePicker}
+                    </Popover>
                     <Input id="edit-endDate" type="date" variant="underline" changed={fieldChanged('end_date')} value={editedBooking.end_date} onChange={(e) => setEditedBooking({ ...editedBooking, end_date: e.target.value })} className="pl-6" />
                   </div>
                 </div>
