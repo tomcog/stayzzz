@@ -1,5 +1,5 @@
 // Numbers pasted from Airbnb/Contacts often carry invisible bidi marks (e.g. U+202C).
-const cleanPhoneInput = (value: string): string => value.replace(/\p{Cf}/gu, '').trim();
+export const cleanPhoneInput = (value: string): string => value.replace(/\p{Cf}/gu, '').trim();
 
 export const formatPhoneNumber = (value: string | undefined | null): string => {
   if (!value) return '';
@@ -24,3 +24,10 @@ export const toDialablePhone = (value: string | undefined | null): string => {
   const digits = trimmed.replace(/\D/g, '');
   return trimmed.startsWith('+') ? `+${digits}` : digits;
 };
+
+// Applied before saving so pasted bidi marks never reach the database.
+export const withCleanPhoneFields = <T extends { phone_number?: string | null; provider_contact?: string | null }>(booking: T): T => ({
+  ...booking,
+  ...(booking.phone_number ? { phone_number: cleanPhoneInput(booking.phone_number) } : {}),
+  ...(booking.provider_contact ? { provider_contact: cleanPhoneInput(booking.provider_contact) } : {}),
+});

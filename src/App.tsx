@@ -13,6 +13,7 @@ import { syncAirbnbCalendar } from './lib/syncAirbnb';
 import { syncVrboCalendar } from './lib/syncVrbo';
 import { getAppAlerts, getDisappearedAlerts, type AppAlert, type LoadedFeeds } from './lib/appAlerts';
 import { sendShareMessage } from './utils/shareMessage';
+import { withCleanPhoneFields } from './utils/formatters';
 
 const AddBookingDialog = lazy(() =>
   import('./components/AddBookingDialog').then(m => ({ default: m.AddBookingDialog }))
@@ -195,7 +196,7 @@ export default function App() {
   const handleAddBooking = async (booking: Omit<Booking, 'id' | 'status'>) => {
     const status = calculateBookingStatus(booking.start_date, booking.end_date);
     const bookingData = {
-      ...booking,
+      ...withCleanPhoneFields(booking),
       airbnb_uid: `manual_${crypto.randomUUID()}`,
     };
 
@@ -214,7 +215,7 @@ export default function App() {
   };
 
   const handleUpdateBooking = async (updatedBooking: Booking) => {
-    const bookingWithDefaults = { ...updatedBooking, pool_heat: updatedBooking.pool_heat || 'not-asked' };
+    const bookingWithDefaults = { ...withCleanPhoneFields(updatedBooking), pool_heat: updatedBooking.pool_heat || 'not-asked' };
     const { id, status, ...updateData } = bookingWithDefaults;
 
     const response = await fetch(`${API_URL}/rentals?id=eq.${id}`, {
