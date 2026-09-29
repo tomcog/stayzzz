@@ -2,7 +2,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, Dr
 import { Button } from "./ui/button";
 import { Phone, MessageCircle } from "lucide-react";
 import { useState } from "react";
-import { formatPhoneNumber } from "../utils/formatters";
+import { formatPhoneNumber, toDialablePhone } from "../utils/formatters";
 
 interface ContactMenuProps {
   phoneNumber: string;
@@ -24,13 +24,13 @@ export function ContactMenu({ phoneNumber, name, children }: ContactMenuProps) {
           <DrawerDescription className="sr-only">Choose how you would like to connect.</DrawerDescription>
         </DrawerHeader>
         <div className="p-4 flex flex-col gap-4">
-          <a href={`tel:${phoneNumber}`} className="w-full">
+          <a href={`tel:${toDialablePhone(phoneNumber)}`} className="w-full">
             <Button className="w-full h-12 text-lg gap-2" variant="outline" size="lg">
               <Phone className="w-5 h-5" />
               Call {formatPhoneNumber(phoneNumber)}
             </Button>
           </a>
-          <a href={`sms:${phoneNumber}`} className="w-full">
+          <a href={`sms:${toDialablePhone(phoneNumber)}`} className="w-full">
             <Button className="w-full h-12 text-lg gap-2" variant="outline" size="lg">
               <MessageCircle className="w-5 h-5" />
               Text {formatPhoneNumber(phoneNumber)}

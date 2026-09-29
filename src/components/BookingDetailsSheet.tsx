@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Booking } from '../App';
 import { parseLocalDate } from '../utils/dateUtils';
-import { formatPhoneNumber } from '../utils/formatters';
+import { formatPhoneNumber, toDialablePhone } from '../utils/formatters';
 import { POOL_HEAT_STATUSES } from '../utils/statusConfig';
 
 interface BookingDetailsSheetProps {
@@ -139,7 +139,7 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
                     <Phone className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-[16px] text-[#4a5565] leading-6">Phone</p>
-                      <a href={`tel:${booking.phone_number}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
+                      <a href={`tel:${toDialablePhone(booking.phone_number)}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
                         {formatPhoneNumber(booking.phone_number)}
                       </a>
                     </div>
@@ -187,7 +187,7 @@ export function BookingDetailsSheet({ open, onOpenChange, booking, onUpdateBooki
                     <Phone className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-[16px] text-[#4a5565] leading-6">Provider contact</p>
-                      <a href={`tel:${booking.provider_contact}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
+                      <a href={`tel:${toDialablePhone(booking.provider_contact)}`} className="text-[16px] leading-6 hover:underline" style={{ color: '#118AB2' }}>
                         {formatPhoneNumber(booking.provider_contact)}
                       </a>
                     </div>
